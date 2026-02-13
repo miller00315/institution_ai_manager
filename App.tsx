@@ -213,10 +213,20 @@ const App: React.FC = () => {
     useEffect(() => {
         let mounted = true;
         let isTabVisible = !document.hidden;
+        let lastVisibilityChange = Date.now();
+        const VISIBILITY_DEBOUNCE_MS = 500; // Wait 500ms after visibility change before processing events
 
         // Listen to visibility changes to prevent actions when tab is not visible
         const handleVisibilityChange = () => {
+            const wasHidden = !isTabVisible;
             isTabVisible = !document.hidden;
+            lastVisibilityChange = Date.now();
+            
+            // If tab just became visible, wait a bit before processing any events
+            if (!wasHidden && isTabVisible) {
+                // Tab just became visible - ignore events for a short period
+                return;
+            }
         };
         
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -265,6 +275,12 @@ const App: React.FC = () => {
                 
                 // Ignore all events when tab is not visible to prevent unnecessary state changes
                 if (typeof document !== 'undefined' && (document.hidden || !isTabVisible)) {
+                    return;
+                }
+                
+                // Ignore events immediately after visibility change to prevent reloads
+                const timeSinceVisibilityChange = Date.now() - lastVisibilityChange;
+                if (timeSinceVisibilityChange < VISIBILITY_DEBOUNCE_MS) {
                     return;
                 }
 

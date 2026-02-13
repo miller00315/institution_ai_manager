@@ -11,6 +11,38 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+
+// Prevent page reload on visibility change in production
+if (typeof window !== 'undefined') {
+  let isReloading = false;
+  
+  // Prevent reload when tab becomes visible
+  window.addEventListener('pageshow', (event) => {
+    // If page was loaded from cache (back/forward), don't reload
+    if (event.persisted) {
+      isReloading = false;
+    }
+  });
+  
+  // Prevent reload on focus
+  window.addEventListener('focus', () => {
+    isReloading = false;
+  });
+  
+  // Override any potential reload attempts
+  const originalReload = window.location.reload;
+  window.location.reload = function(forcedReload?: boolean) {
+    if (isReloading) {
+      return;
+    }
+    // Only allow reload if explicitly forced (like in setup screen)
+    if (forcedReload === true) {
+      isReloading = true;
+      originalReload.call(window.location);
+    }
+  };
+}
+
 root.render(
   <React.StrictMode>
     <App />
