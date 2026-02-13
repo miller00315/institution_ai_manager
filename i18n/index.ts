@@ -34,14 +34,20 @@ const LANGUAGE_STORAGE_KEY = 'edutest_language';
 
 // Get stored language or detect from browser
 const getInitialLanguage = (): SupportedLanguage => {
-  // Check localStorage first
-  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  if (stored && stored in SUPPORTED_LANGUAGES) {
-    return stored as SupportedLanguage;
-  }
-  
-  // Detect from browser
-  const browserLang = navigator.language;
+    // Check localStorage first (only if available)
+    if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+            const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+            if (stored && stored in SUPPORTED_LANGUAGES) {
+                return stored as SupportedLanguage;
+            }
+        } catch (e) {
+            // localStorage not available, continue with browser detection
+        }
+    }
+    
+    // Detect from browser
+    const browserLang = typeof navigator !== 'undefined' ? navigator.language : DEFAULT_LANGUAGE;
   
   // Check for exact match
   if (browserLang in SUPPORTED_LANGUAGES) {

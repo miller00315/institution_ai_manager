@@ -212,12 +212,13 @@ const App: React.FC = () => {
 
     useEffect(() => {
         let mounted = true;
-        let isTabVisible = !document.hidden;
+        let isTabVisible = typeof document !== 'undefined' ? !document.hidden : true;
         let lastVisibilityChange = Date.now();
         const VISIBILITY_DEBOUNCE_MS = 500; // Wait 500ms after visibility change before processing events
 
         // Listen to visibility changes to prevent actions when tab is not visible
         const handleVisibilityChange = () => {
+            if (typeof document === 'undefined') return;
             const wasHidden = !isTabVisible;
             isTabVisible = !document.hidden;
             lastVisibilityChange = Date.now();
@@ -229,7 +230,9 @@ const App: React.FC = () => {
             }
         };
         
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
 
         if (client) {
             setIsConnected(true);
@@ -405,7 +408,9 @@ const App: React.FC = () => {
                 mounted = false;
                 subscription.unsubscribe();
                 clearInterval(sessionCheckInterval);
-                document.removeEventListener('visibilitychange', handleVisibilityChange);
+                if (typeof document !== 'undefined') {
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                }
             };
         } else {
             setAuthLoading(false);
