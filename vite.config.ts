@@ -34,7 +34,6 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
-          '@shared': path.resolve(__dirname, '../shared'),
         },
       },
     };
