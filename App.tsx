@@ -21,6 +21,7 @@ const SetupScreen = () => {
 
         try {
             setupSupabase(url.trim(), key.trim());
+            // Reload to initialize Supabase client with new credentials
             window.location.reload();
         } catch (err: any) {
             setError(err.message || "Invalid configuration. Check URL format.");
@@ -211,6 +212,14 @@ const App: React.FC = () => {
 
     useEffect(() => {
         let mounted = true;
+        let isTabVisible = !document.hidden;
+
+        // Listen to visibility changes to prevent actions when tab is not visible
+        const handleVisibilityChange = () => {
+            isTabVisible = !document.hidden;
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         if (client) {
             setIsConnected(true);
@@ -253,6 +262,11 @@ const App: React.FC = () => {
 
             const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
                 if (!mounted) return;
+                
+                // Ignore all events when tab is not visible to prevent unnecessary state changes
+                if (typeof document !== 'undefined' && (document.hidden || !isTabVisible)) {
+                    return;
+                }
 
                 if (event === 'SIGNED_IN') {
                     if (signInProcessingRef.current) return;
@@ -321,8 +335,14 @@ const App: React.FC = () => {
                 }
             });
 
+            // Only check session when tab is visible to avoid unnecessary checks when tab is in background
             const sessionCheckInterval = setInterval(async () => {
                 if (!mounted) return;
+                
+                // Skip session check if tab is not visible (user switched to another tab)
+                if (typeof document !== 'undefined' && (document.hidden || !isTabVisible)) {
+                    return;
+                }
 
                 const { data: { session: currentSession } } = await client.auth.getSession();
                 if (!currentSession) {
@@ -369,6 +389,7 @@ const App: React.FC = () => {
                 mounted = false;
                 subscription.unsubscribe();
                 clearInterval(sessionCheckInterval);
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
             };
         } else {
             setAuthLoading(false);
