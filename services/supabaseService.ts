@@ -1,12 +1,12 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// 1. Try Environment Variables (Vite uses import.meta.env)
-// Support both VITE_ prefix and REACT_APP_ prefix for compatibility
-// Note: We can't use typeof import, so we check import.meta directly
+// 1. Try Environment Variables
+// Vite exposes env vars through import.meta.env (with VITE_ prefix) or through process.env (defined in vite.config.ts)
 let envUrl: string | undefined;
 let envKey: string | undefined;
 
+// Try import.meta.env first (Vite's default way)
 try {
     // @ts-ignore - import.meta is available in Vite
     if (typeof import.meta !== 'undefined' && import.meta.env) {
@@ -16,14 +16,16 @@ try {
         envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
     }
 } catch {
-    // import.meta not available, try process.env
+    // import.meta not available
 }
 
-// Fallback to process.env
+// Try process.env (defined in vite.config.ts via define)
 if (!envUrl && typeof process !== 'undefined' && process.env) {
+    // @ts-ignore - process.env is defined in vite.config.ts
     envUrl = process.env.REACT_APP_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 }
 if (!envKey && typeof process !== 'undefined' && process.env) {
+    // @ts-ignore - process.env is defined in vite.config.ts
     envKey = process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 }
 
@@ -35,6 +37,17 @@ let client: SupabaseClient | null = null;
 
 const url = envUrl || localUrl;
 const key = envKey || localKey;
+
+// Debug: Log if env vars are found (only in development)
+if (typeof window !== 'undefined' && (import.meta.env?.DEV || import.meta.env?.MODE === 'development')) {
+  if (envUrl && envKey) {
+    console.log('✅ Supabase: Environment variables found from env');
+  } else if (localUrl && localKey) {
+    console.log('✅ Supabase: Using credentials from localStorage');
+  } else {
+    console.warn('⚠️ Supabase: No credentials found. envUrl:', !!envUrl, 'envKey:', !!envKey, 'localUrl:', !!localUrl, 'localKey:', !!localKey);
+  }
+}
 
 if (url && key) {
   try {
