@@ -1208,7 +1208,7 @@ export class TestReleaseRepositoryImpl implements ITestReleaseRepository {
     async getReleases(includeDeleted = false): Promise<TestRelease[]> {
         let query = this.supabase
             .from('test_releases')
-            .select('*, tests(title, school_grades(name)), students(app_users(first_name, last_name), student_hash, classes(id, name), school_grades(id, name), grade_level), professors(app_users(first_name, last_name))')
+            .select('*, tests(title, school_grades(name)), students(app_users(first_name, last_name), student_hash, classes(id, name), school_grades(id, name)), professors(app_users(first_name, last_name))')
             .order('created_at', { ascending: false });
 
         if (!includeDeleted) {
@@ -1242,7 +1242,7 @@ export class TestReleaseRepositoryImpl implements ITestReleaseRepository {
     async getReleasesByInstitution(institutionId: string, includeDeleted = false): Promise<TestRelease[]> {
         let query = this.supabase
             .from('test_releases')
-            .select('*, tests(title, school_grades(name)), students(app_users(first_name, last_name), student_hash, classes(id, name), school_grades(id, name), grade_level), professors(app_users(first_name, last_name))')
+            .select('*, tests(title, school_grades(name)), students(app_users(first_name, last_name), student_hash, classes(id, name), school_grades(id, name)), professors(app_users(first_name, last_name))')
             .eq('institution_id', institutionId)
             .order('created_at', { ascending: false });
 
@@ -1405,7 +1405,6 @@ export class TestReleaseRepositoryImpl implements ITestReleaseRepository {
                                     .select(`
                                         id,
                                         student_hash,
-                                        grade_level,
                                         age,
                                         class_id,
                                         institution_id,
@@ -1487,7 +1486,7 @@ export class TestReleaseRepositoryImpl implements ITestReleaseRepository {
                                         // Buscar student_hash e outros campos básicos
                                         const { data: studentFull, error: fullError } = await this.supabase
                                             .from('students')
-                                            .select('student_hash, grade_level, age')
+                                            .select('student_hash, age')
                                             .eq('id', r.student_id)
                                             .maybeSingle();
 
