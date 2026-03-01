@@ -6,6 +6,7 @@ import { BookOpen, Plus, Trash2, Loader2, AlertTriangle, Building2, GraduationCa
 import { Discipline } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 import { getSupabaseClient } from '../services/supabaseService';
+import { getFriendlyErrorMessage } from '../utils/errorHandling';
 
 /**
  * DisciplineManager - INSTITUTION ONLY
@@ -149,11 +150,28 @@ const DisciplineManager: React.FC<DisciplineManagerProps> = ({ hasSupabase, inst
           if (editingId) {
               await updateDiscipline(editingId, payload);
           } else {
-              // Manual insert to get ID immediately for relation creation
+              // Ao criar: a constraint UNIQUE(name, grade_id) não considera deleted.
+              // Se existir uma disciplina excluída com mesmo nome+série, restaurar e atualizar em vez de inserir.
               if (supabase) {
-                  const { data, error } = await supabase.from('disciplines').insert(payload).select().single();
-                  if (error) throw error;
-                  targetId = data.id;
+                  const { data: existing } = await supabase
+                      .from('disciplines')
+                      .select('id, deleted')
+                      .eq('name', formData.name.trim())
+                      .eq('grade_id', formData.grade_id)
+                      .maybeSingle();
+
+                  if (existing) {
+                      if (existing.deleted) {
+                          await supabase.from('disciplines').update({ ...payload, deleted: false }).eq('id', existing.id);
+                          targetId = existing.id;
+                      } else {
+                          throw { code: '23505', details: 'unique_discipline_per_grade', message: 'duplicate key value violates unique constraint "unique_discipline_per_grade"' };
+                      }
+                  } else {
+                      const { data, error } = await supabase.from('disciplines').insert(payload).select().single();
+                      if (error) throw error;
+                      targetId = data.id;
+                  }
               }
           }
           
@@ -214,6 +232,8 @@ const DisciplineManager: React.FC<DisciplineManagerProps> = ({ hasSupabase, inst
           setIsFormOpen(false);
           setEditingId(null);
           setFormData({ name: '', description: '', grade_id: '', professor_id: '', bncc_ids: [] });
+      } catch (err: any) {
+          alert(getFriendlyErrorMessage(err));
       } finally {
           setIsSaving(false);
       }

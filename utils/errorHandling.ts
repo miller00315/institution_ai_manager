@@ -26,5 +26,19 @@ export const getFriendlyErrorMessage = (error: any): string => {
         return "Não é possível excluir: Este registro é referenciado por outros dados. Remova as dependências primeiro.";
     }
 
+    // Postgres Error Code 23505: Unique violation
+    if (error.code === '23505') {
+        const msg = (error.message || '').toLowerCase();
+        const details = error.details || '';
+        if (msg.includes('unique_discipline_per_grade') || details.includes('unique_discipline_per_grade')) {
+            const match = details.match(/Key \(name, grade_id\)=\(([^,]+),/);
+            const name = match ? match[1].trim() : 'esta disciplina';
+            return `Já existe uma disciplina com o nome "${name}" nesta série. Escolha outro nome ou edite a disciplina existente.`;
+        }
+        if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
+            return "Já existe um registro com esses dados. Verifique os campos e tente novamente.";
+        }
+    }
+
     return error.message || String(error);
 };
