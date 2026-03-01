@@ -492,8 +492,8 @@ const DisciplineManager: React.FC<DisciplineManagerProps> = ({ hasSupabase, inst
             </div>
         )}
 
-        {/* List */}
-        {selectedInstId && (
+        {/* List - apenas na etapa de listagem (não exibir ao editar/criar) */}
+        {selectedInstId && !isFormOpen && (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
             <table className="w-full text-left">
                 <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
