@@ -294,12 +294,14 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
 
         setIsSubmitting(true);
         try {
-            // Limpar campos vazios antes de enviar
+            // Idade sempre derivada da data de nascimento quando informada
+            const ageFromBirthdate = formData.birthdate ? calculateAge(formData.birthdate) : null;
             const cleanFormData = {
                 ...formData,
                 email: formData.email.trim(),
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
+                age: ageFromBirthdate ?? formData.age ?? 16,
                 address_line_1: formData.address_line_1?.trim() || '',
                 city: formData.city?.trim() || '',
                 state_province: formData.state_province?.trim() || '',
@@ -355,16 +357,23 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
         if (!editingStudentId || readOnly) return;
         setIsSubmitting(true);
         try {
-            const success = await updateStudent(editingStudentId, { ...editFormData, email: editEmail, birthdate: editBirthdate || undefined } as any);
+            const computedAge = editBirthdate ? calculateAge(editBirthdate) : null;
+            const payload = {
+                ...editFormData,
+                email: editEmail,
+                birthdate: editBirthdate,
+                age: computedAge ?? editFormData.age ?? null
+            } as any;
+            const success = await updateStudent(editingStudentId, payload);
             if (success) {
                 setShowEditModal(false);
                 setEditingStudentId(null);
-                // Update selected student if in detail view
                 if (selectedStudent && selectedStudent.id === editingStudentId) {
                     setSelectedStudent(prev => prev ? ({
                         ...prev,
                         ...editFormData,
-                        app_users: { ...prev.app_users, email: editEmail, birthdate: editBirthdate || undefined } as any
+                        age: computedAge ?? prev.age,
+                        app_users: { ...prev.app_users, email: editEmail, birthdate: editBirthdate || null } as any
                     }) : null);
                 }
             }
@@ -516,18 +525,8 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Idade</label>
-                            <input
-                                type="number"
-                                value={editFormData.age}
-                                onChange={e => setEditFormData({ ...editFormData, age: parseInt(e.target.value) })}
-                                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Série</label>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Série</label>
                             <select
                                 value={editFormData.grade_id}
                                 onChange={e => setEditFormData({ ...editFormData, grade_id: e.target.value, class_id: '' })}
@@ -536,7 +535,6 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
                                 <option value="">Selecionar Série</option>
                                 {editFilteredGrades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                             </select>
-                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Turma</label>
@@ -621,6 +619,28 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
                                 <div className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                                     <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Building2 size={14} /> Inst.</span>
                                     <span className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">{selectedStudent.institutions?.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Calendar size={14} /> Data de Nascimento</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                                        {(() => {
+                                            const d = (selectedStudent.app_users as { birthdate?: string })?.birthdate;
+                                            if (!d) return '—';
+                                            const [y, m, day] = d.split('-');
+                                            return day && m && y ? `${day}/${m}/${y}` : d;
+                                        })()}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                                    <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">Idade</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                                        {(() => {
+                                            const d = (selectedStudent.app_users as { birthdate?: string })?.birthdate;
+                                            if (d) return `${calculateAge(d)} anos`;
+                                            if (selectedStudent.age != null && selectedStudent.age !== undefined) return `${selectedStudent.age} anos`;
+                                            return '—';
+                                        })()}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                                     <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Hash size={14} /> ID</span>

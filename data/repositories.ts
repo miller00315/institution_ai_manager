@@ -773,7 +773,8 @@ export class StudentRepositoryImpl implements IStudentRepository {
             last_name: student.last_name,
             rule_id: ruleId,
             profile_picture_url: profileUrl,
-            address_id: addressId
+            address_id: addressId,
+            birthdate: (student as { birthdate?: string }).birthdate?.trim() || null
         }).select().single();
 
         if (userError) throw userError;
@@ -815,7 +816,11 @@ export class StudentRepositoryImpl implements IStudentRepository {
                 appUserUpdate.first_name = parts[0] || '';
                 appUserUpdate.last_name = parts.slice(1).join(' ') || '';
             }
-            if (birthdate !== undefined) appUserUpdate.birthdate = (typeof birthdate === 'string' ? birthdate.trim() : birthdate) || null;
+            // birthdate: enviar sempre que vier no payload (permite limpar com null)
+            if (birthdate !== undefined) {
+                const val = typeof birthdate === 'string' ? birthdate.trim() : birthdate;
+                appUserUpdate.birthdate = val || null;
+            }
             if (Object.keys(appUserUpdate).length > 0) {
                 const { error: userError } = await this.supabase.from('app_users').update(appUserUpdate).eq('id', userId);
                 if (userError) throw userError;
