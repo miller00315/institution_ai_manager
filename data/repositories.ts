@@ -499,10 +499,12 @@ export class ProfessorRepositoryImpl implements IProfessorRepository {
 
         if (userError) throw userError;
 
-        await this.supabase.from('professors').insert({
+        const departmentId = professor.department_id?.trim() || null;
+        const { error: profError } = await this.supabase.from('professors').insert({
             user_id: userData.id,
-            department_id: professor.department_id
+            department_id: departmentId
         });
+        if (profError) throw profError;
     }
 
     async updateProfessor(id: string, professor: Partial<Professor>): Promise<void> {

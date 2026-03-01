@@ -206,6 +206,8 @@ const ProfessorManager: React.FC<ProfessorManagerProps> = ({ hasSupabase, instit
             setSelectedCountry('');
             setSelectedState('');
         }
+    } catch (err: any) {
+        alert(getFriendlyErrorMessage(err));
     } finally {
         setIsSubmitting(false);
     }
