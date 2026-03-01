@@ -121,7 +121,7 @@ const DepartmentManager: React.FC<DepartmentManagerProps> = ({ hasSupabase, inst
           }
           setModalConfig({ ...modalConfig, isOpen: false });
       } catch (err: any) {
-          alert(err.message || 'Erro ao executar ação');
+          alert(err.message || t('common.errorExecutingAction'));
       } finally {
           setIsActionLoading(false);
       }

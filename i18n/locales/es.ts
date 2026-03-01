@@ -56,6 +56,7 @@ export const es = {
     checkingPermissions: 'Verificando permisos de acceso.',
     accessRestricted: 'Acceso Restringido',
     onlyAdminAccess: 'Solo los administradores pueden acceder a esta configuración.',
+    errorExecutingAction: 'Error al ejecutar la acción.',
   },
 
   // Navigation
@@ -452,6 +453,8 @@ export const es = {
     sending: 'Enviando...',
     you: 'Usted',
     downloadFile: 'Descargar archivo',
+    errorCreateRoom: 'Error al crear la sala.',
+    errorOperation: 'Error en la operación.',
   },
 
   // Settings

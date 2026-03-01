@@ -56,6 +56,7 @@ export const en = {
     checkingPermissions: 'Checking access permissions.',
     accessRestricted: 'Access Restricted',
     onlyAdminAccess: 'Only administrators can access this configuration.',
+    errorExecutingAction: 'Error performing action.',
   },
 
   // Navigation
@@ -456,6 +457,8 @@ export const en = {
     sending: 'Sending...',
     you: 'You',
     downloadFile: 'Download file',
+    errorCreateRoom: 'Error creating room.',
+    errorOperation: 'Error performing operation.',
   },
 
   // Settings

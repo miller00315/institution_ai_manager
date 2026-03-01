@@ -1040,7 +1040,7 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                     {/* Report Type */}
                     <div>
                         <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200">
-                            Tipo de Relatório
+                            {t('reports.reportType')}
                         </label>
                         <select
                             value={reportType}
@@ -1064,7 +1064,7 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                     {/* Date Range */}
                     <div>
                         <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200">
-                            Data Inicial
+                            {t('reports.startDate')}
                         </label>
                         <input
                             type="date"
@@ -1076,7 +1076,7 @@ const ReportManager: React.FC<ReportManagerProps> = ({
 
                     <div>
                         <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200">
-                            Data Final
+                            {t('reports.endDate')}
                         </label>
                         <input
                             type="date"
@@ -1090,10 +1090,10 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                     {reportType !== 'institution' && (
                         <div>
                             <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-200">
-                                {reportType === 'class' ? 'Turma' : 
-                                 reportType === 'student' ? 'Aluno' : 
-                                 reportType === 'test' ? 'Prova' : 
-                                 reportType === 'professor' ? 'Professor' : ''}
+                                {reportType === 'class' ? t('testCorrection.class') : 
+                                 reportType === 'student' ? t('testCorrection.student') : 
+                                 reportType === 'test' ? t('testCorrection.test') : 
+                                 reportType === 'professor' ? t('roles.teacher') : ''}
                             </label>
                             <select
                                 value={reportType === 'class' ? selectedClassId : 
