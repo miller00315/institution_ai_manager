@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
 
 interface ConfirmationModalProps {
@@ -25,9 +26,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isDestructive = false,
   isLoading = false
 }) => {
-  if (!isOpen) return null;
-
-  return (
+  const modalContent = isOpen ? (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden scale-100 transform transition-all animate-in zoom-in-95 duration-200">
         <div className="p-6">
@@ -70,7 +69,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  ) : null;
+
+  if (typeof document === 'undefined') {
+    return isOpen ? modalContent : null;
+  }
+  return createPortal(modalContent, document.body);
 };
 
 export default ConfirmationModal;
