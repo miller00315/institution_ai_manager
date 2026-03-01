@@ -294,13 +294,14 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
 
         setIsSubmitting(true);
         try {
-            // Idade sempre derivada da data de nascimento quando informada
+            // Idade sempre derivada da data de nascimento quando informada; birthdate enviado para app_users
             const ageFromBirthdate = formData.birthdate ? calculateAge(formData.birthdate) : null;
             const cleanFormData = {
                 ...formData,
                 email: formData.email.trim(),
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
+                birthdate: formData.birthdate?.trim() || '',
                 age: ageFromBirthdate ?? formData.age ?? 16,
                 address_line_1: formData.address_line_1?.trim() || '',
                 city: formData.city?.trim() || '',
