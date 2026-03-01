@@ -73,6 +73,7 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<Student>>({ name: '', age: 0, grade_id: '', class_id: '', institution_id: '' });
     const [editEmail, setEditEmail] = useState('');
+    const [editBirthdate, setEditBirthdate] = useState('');
 
     // Upload State
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -345,6 +346,7 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
             institution_id: student.institution_id
         });
         setEditEmail(student.app_users?.email || '');
+        setEditBirthdate((student.app_users as { birthdate?: string })?.birthdate || '');
         setShowEditModal(true);
     };
 
@@ -353,7 +355,7 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
         if (!editingStudentId || readOnly) return;
         setIsSubmitting(true);
         try {
-            const success = await updateStudent(editingStudentId, { ...editFormData, email: editEmail } as any);
+            const success = await updateStudent(editingStudentId, { ...editFormData, email: editEmail, birthdate: editBirthdate || undefined } as any);
             if (success) {
                 setShowEditModal(false);
                 setEditingStudentId(null);
@@ -362,10 +364,12 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
                     setSelectedStudent(prev => prev ? ({
                         ...prev,
                         ...editFormData,
-                        app_users: { ...prev.app_users, email: editEmail } as any
+                        app_users: { ...prev.app_users, email: editEmail, birthdate: editBirthdate || undefined } as any
                     }) : null);
                 }
             }
+        } catch (err: any) {
+            alert(getFriendlyErrorMessage(err));
         } finally {
             setIsSubmitting(false);
         }
@@ -492,6 +496,15 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
                             type="email"
                             value={editEmail}
                             onChange={e => setEditEmail(e.target.value)}
+                            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Data de Nascimento</label>
+                        <input
+                            type="date"
+                            value={editBirthdate}
+                            onChange={e => setEditBirthdate(e.target.value)}
                             className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>

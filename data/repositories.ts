@@ -666,7 +666,7 @@ export class StudentRepositoryImpl implements IStudentRepository {
     constructor(private supabase: SupabaseClient) { }
 
     async getStudents(includeDeleted = false): Promise<Student[]> {
-        let query = this.supabase.from('students').select('*, app_users(first_name, last_name, email, profile_picture_url), school_grades(name), classes(name), institutions(name)');
+        let query = this.supabase.from('students').select('*, app_users(first_name, last_name, email, profile_picture_url, birthdate), school_grades(name), classes(name), institutions(name)');
         if (!includeDeleted) query = query.eq('deleted', false);
         const { data, error } = await query;
         if (error) throw error;
@@ -679,7 +679,7 @@ export class StudentRepositoryImpl implements IStudentRepository {
     }
 
     async getStudentsByInstitution(institutionId: string, includeDeleted = false): Promise<Student[]> {
-        let query = this.supabase.from('students').select('*, app_users(first_name, last_name, email, profile_picture_url), school_grades(name), classes(name), institutions(name)').eq('institution_id', institutionId);
+        let query = this.supabase.from('students').select('*, app_users(first_name, last_name, email, profile_picture_url, birthdate), school_grades(name), classes(name), institutions(name)').eq('institution_id', institutionId);
         if (!includeDeleted) query = query.eq('deleted', false);
         const { data, error } = await query;
         if (error) throw error;
@@ -694,7 +694,7 @@ export class StudentRepositoryImpl implements IStudentRepository {
     async getStudentsByClass(classId: string): Promise<Student[]> {
         const { data, error } = await this.supabase
             .from('students')
-            .select('*, app_users(first_name, last_name, email, profile_picture_url), school_grades(name), institutions(name)')
+            .select('*, app_users(first_name, last_name, email, profile_picture_url, birthdate), school_grades(name), institutions(name)')
             .eq('class_id', classId)
             .eq('deleted', false);
 
@@ -793,8 +793,50 @@ export class StudentRepositoryImpl implements IStudentRepository {
         if (stuError) throw stuError;
     }
 
-    async updateStudent(id: string, student: Partial<Student>): Promise<void> {
-        await this.supabase.from('students').update(student).eq('id', id);
+    async updateStudent(id: string, student: Partial<Student> & { email?: string }): Promise<void> {
+        const { data: studentRow, error: fetchError } = await this.supabase
+            .from('students')
+            .select('user_id')
+            .eq('id', id)
+            .single();
+        if (fetchError || !studentRow?.user_id) throw fetchError || new Error('Aluno não encontrado.');
+
+        const userId = studentRow.user_id;
+
+        // name, email e birthdate ficam em app_users (first_name, last_name, email, birthdate)
+        const name = (student as any).name;
+        const email = (student as any).email;
+        const birthdate = (student as any).birthdate;
+        if (name !== undefined || email !== undefined || birthdate !== undefined) {
+            const appUserUpdate: Record<string, unknown> = {};
+            if (email !== undefined) appUserUpdate.email = (typeof email === 'string' ? email.trim() : email) || null;
+            if (name !== undefined && typeof name === 'string') {
+                const parts = name.trim().split(/\s+/);
+                appUserUpdate.first_name = parts[0] || '';
+                appUserUpdate.last_name = parts.slice(1).join(' ') || '';
+            }
+            if (birthdate !== undefined) appUserUpdate.birthdate = (typeof birthdate === 'string' ? birthdate.trim() : birthdate) || null;
+            if (Object.keys(appUserUpdate).length > 0) {
+                const { error: userError } = await this.supabase.from('app_users').update(appUserUpdate).eq('id', userId);
+                if (userError) throw userError;
+            }
+        }
+
+        // Campos da tabela students (grade_id e institution_id obrigatórios; class_id opcional)
+        const gradeId = (student.grade_id as string)?.trim() || null;
+        const institutionId = (student.institution_id as string)?.trim() || null;
+        const classId = (student.class_id as string)?.trim() || null;
+        const age = student.age != null ? Number(student.age) : null;
+
+        const studentPayload: Record<string, unknown> = {
+            grade_id: gradeId,
+            institution_id: institutionId,
+            class_id: classId,
+            age
+        };
+
+        const { error: stuError } = await this.supabase.from('students').update(studentPayload).eq('id', id);
+        if (stuError) throw stuError;
     }
 
     async removeStudent(id: string): Promise<void> {

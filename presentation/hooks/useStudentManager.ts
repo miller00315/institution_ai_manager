@@ -177,7 +177,10 @@ export const useStudentManager = (hasSupabase: boolean, institutionId?: string) 
   };
 
   const updateStudent = async (id: string, data: Partial<Student>) => {
-    if (!useCase) return;
+    if (!useCase) {
+      alert(getFriendlyErrorMessage(new Error('Conexão com o banco não disponível. Verifique a configuração.')));
+      return false;
+    }
     try {
       await useCase.updateStudent(id, data);
       await fetchData();
