@@ -778,15 +778,19 @@ export class StudentRepositoryImpl implements IStudentRepository {
 
         if (userError) throw userError;
 
+        const gradeId = student.grade_id?.trim() || null;
+        const institutionId = student.institution_id?.trim() || null;
+        const classId = student.class_id?.trim() || null;
         const hash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        await this.supabase.from('students').insert({
+        const { error: stuError } = await this.supabase.from('students').insert({
             user_id: userData.id,
-            grade_id: student.grade_id,
-            class_id: student.class_id || null,
-            institution_id: student.institution_id,
-            age: student.age || null,
+            grade_id: gradeId,
+            class_id: classId,
+            institution_id: institutionId,
+            age: student.age ?? null,
             student_hash: hash
         });
+        if (stuError) throw stuError;
     }
 
     async updateStudent(id: string, student: Partial<Student>): Promise<void> {

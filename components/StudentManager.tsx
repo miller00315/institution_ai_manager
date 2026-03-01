@@ -327,6 +327,8 @@ const StudentManager: React.FC<StudentManagerProps> = ({ hasSupabase, readOnly =
                 setSelectedCountry('');
                 setSelectedState('');
             }
+        } catch (err: any) {
+            alert(getFriendlyErrorMessage(err));
         } finally {
             setIsSubmitting(false);
         }

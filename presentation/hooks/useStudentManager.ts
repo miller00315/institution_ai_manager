@@ -113,7 +113,11 @@ export const useStudentManager = (hasSupabase: boolean, institutionId?: string) 
   }, [hasSupabase, fetchData, fetchRules]);
 
   const registerStudent = async (data: UserRegistrationDTO, file?: File, address?: Partial<Address>) => {
-    if (!useCase || !ruleUseCase) return;
+    if (!useCase || !ruleUseCase) {
+      const msg = getFriendlyErrorMessage(new Error('Conexão com o banco não disponível. Verifique a configuração.'));
+      alert(msg);
+      return false;
+    }
     try {
       const registrationData = { ...data };
       if (!registrationData.rule_id) {
