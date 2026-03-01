@@ -25,6 +25,7 @@ export interface AppUser {
     last_name: string;
     profile_picture_url?: string;
     birthdate?: string;
+    deleted?: boolean;
     user_rules?: UserRule;
 }
 

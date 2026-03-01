@@ -861,11 +861,19 @@ export class StudentRepositoryImpl implements IStudentRepository {
             throw new DependencyError(`Não é possível excluir este aluno. Existem registros vinculados: ${dependencies.join(', ')}. Esses dados históricos serão preservados.`);
         }
 
+        const { data: row, error: fetchErr } = await this.supabase.from('students').select('user_id').eq('id', id).single();
+        if (fetchErr || !row?.user_id) throw fetchErr || new Error('Aluno não encontrado.');
+
         await this.supabase.from('students').update({ deleted: true }).eq('id', id);
+        await this.supabase.from('app_users').update({ deleted: true }).eq('id', row.user_id);
     }
 
     async restoreStudent(id: string): Promise<void> {
+        const { data: row, error: fetchErr } = await this.supabase.from('students').select('user_id').eq('id', id).single();
+        if (fetchErr || !row?.user_id) throw fetchErr || new Error('Aluno não encontrado.');
+
         await this.supabase.from('students').update({ deleted: false }).eq('id', id);
+        await this.supabase.from('app_users').update({ deleted: false }).eq('id', row.user_id);
     }
 
     async getStudentHistory(studentId: string): Promise<TestResult[]> {
