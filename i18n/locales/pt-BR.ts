@@ -699,6 +699,7 @@ export const ptBR = {
     date: 'Data',
     average: 'Média',
     noData: 'Nenhum dado disponível para o período selecionado',
+    noResultsInPeriod: 'Nenhum resultado de prova corrigida no período. Ajuste a data inicial e final acima para ver o desempenho.',
   },
 };
 

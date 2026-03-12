@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import LoginScreen from './components/LoginScreen';
 import { UserRole } from './types';
 import { getSupabaseClient, setupSupabase, signOut } from './services/supabaseService';
-import { Loader2, Database, GraduationCap, Save, AlertCircle } from 'lucide-react';
+import { Loader2, Database, GraduationCap, Save, AlertCircle, LogIn } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { useTheme } from './presentation/hooks/useTheme';
 import InstitutionLayout from './components/InstitutionLayout';
@@ -462,16 +462,23 @@ const App: React.FC = () => {
 
     if (session && !authLoading && userRole !== 'Institution') {
         return (
-            <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full border border-red-200">
+            <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 max-w-md w-full border border-red-200 dark:border-red-800">
                     <div className="flex flex-col items-center mb-6">
-                        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4">
+                        <div className="w-16 h-16 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-2xl flex items-center justify-center mb-4">
                             <AlertCircle size={32} />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-900 mb-2">Acesso Negado</h2>
-                        <p className="text-slate-600 text-center text-sm">
-                            Esta aplicação é exclusiva para Gestores de Instituições. Por favor, acesse a aplicação correta para seu perfil.
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Acesso Negado</h2>
+                        <p className="text-slate-600 dark:text-slate-400 text-center text-sm mb-6">
+                            Esta aplicação é exclusiva para Gestores de Instituições. Por favor, acesse a aplicação correta para seu perfil ou faça login com outra conta.
                         </p>
+                        <button
+                            type="button"
+                            onClick={async () => { await signOut(); }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+                        >
+                            <LogIn size={18} /> Fazer login novamente
+                        </button>
                     </div>
                 </div>
             </div>
@@ -480,16 +487,23 @@ const App: React.FC = () => {
 
     if (session && !authLoading && userRole === 'Student' && roleCheckAttempted) {
         return (
-            <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full border border-red-200">
+            <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 max-w-md w-full border border-red-200 dark:border-red-800">
                     <div className="flex flex-col items-center mb-6">
-                        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4">
+                        <div className="w-16 h-16 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-2xl flex items-center justify-center mb-4">
                             <AlertCircle size={32} />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-900 mb-2">Erro ao Carregar Perfil</h2>
-                        <p className="text-slate-600 text-center text-sm">
-                            Não foi possível determinar seu perfil de usuário. Por favor, recarregue a página ou entre em contato com o suporte.
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Erro ao Carregar Perfil</h2>
+                        <p className="text-slate-600 dark:text-slate-400 text-center text-sm mb-6">
+                            Não foi possível determinar seu perfil de usuário. Por favor, tente fazer login novamente ou entre em contato com o suporte.
                         </p>
+                        <button
+                            type="button"
+                            onClick={async () => { await signOut(); }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+                        >
+                            <LogIn size={18} /> Fazer login novamente
+                        </button>
                     </div>
                 </div>
             </div>

@@ -161,9 +161,11 @@ export interface Question {
     subject: string;
     grade_id: string;
     image_url?: string;
+    bncc_id?: string | null;
     deleted?: boolean;
     question_options?: QuestionOption[];
     school_grades?: SchoolGrade;
+    bncc?: BNCCItem;
     weight?: number;
 }
 

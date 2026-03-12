@@ -31,7 +31,7 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
     const [dateFilter, setDateFilter] = useState<ReportDateFilter>(() => {
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 1);
+        startDate.setMonth(startDate.getMonth() - 6); // 6 months default so performance lists are more likely to have data
         return {
             startDate: startDate.toISOString().split('T')[0],
             endDate: endDate.toISOString().split('T')[0]
@@ -87,19 +87,21 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
         }
     }, [hasSupabase, userRole, supabase, professorIdFetched]); // Removed effectiveProfessorId to prevent loop
 
-    const fetchClasses = useCallback(async () => {
+    const fetchClasses = useCallback(async (skipLoading = false) => {
         if (!useCase || !supabase) return;
         
         // Don't fetch if we don't have required IDs
         if (userRole === 'Teacher' && !effectiveProfessorId) return;
         if (userRole === 'Institution' && !institutionId) return;
         
-        setLoading(true);
-        setError(null);
+        if (!skipLoading) {
+            setLoading(true);
+            setError(null);
+        }
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                setLoading(false);
+                if (!skipLoading) setLoading(false);
                 return;
             }
 
@@ -114,23 +116,25 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
             console.error("Error fetching classes:", err);
             setError(err.message || "Failed to load classes.");
         } finally {
-            setLoading(false);
+            if (!skipLoading) setLoading(false);
         }
     }, [useCase, supabase, userRole, effectiveProfessorId, institutionId]);
 
-    const fetchStudents = useCallback(async () => {
+    const fetchStudents = useCallback(async (skipLoading = false) => {
         if (!useCase || !supabase) return;
         
         // Don't fetch if we don't have required IDs
         if (userRole === 'Teacher' && !effectiveProfessorId) return;
         if (userRole === 'Institution' && !institutionId) return;
         
-        setLoading(true);
-        setError(null);
+        if (!skipLoading) {
+            setLoading(true);
+            setError(null);
+        }
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                setLoading(false);
+                if (!skipLoading) setLoading(false);
                 return;
             }
 
@@ -145,23 +149,25 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
             console.error("Error fetching students:", err);
             setError(err.message || "Failed to load students.");
         } finally {
-            setLoading(false);
+            if (!skipLoading) setLoading(false);
         }
     }, [useCase, supabase, userRole, effectiveProfessorId, institutionId]);
 
-    const fetchTests = useCallback(async () => {
+    const fetchTests = useCallback(async (skipLoading = false) => {
         if (!useCase || !supabase) return;
         
         // Don't fetch if we don't have required IDs
         if (userRole === 'Teacher' && !effectiveProfessorId) return;
         if (userRole === 'Institution' && !institutionId) return;
         
-        setLoading(true);
-        setError(null);
+        if (!skipLoading) {
+            setLoading(true);
+            setError(null);
+        }
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                setLoading(false);
+                if (!skipLoading) setLoading(false);
                 return;
             }
 
@@ -176,7 +182,7 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
             console.error("Error fetching tests:", err);
             setError(err.message || "Failed to load tests.");
         } finally {
-            setLoading(false);
+            if (!skipLoading) setLoading(false);
         }
     }, [useCase, supabase, userRole, effectiveProfessorId, institutionId]);
 
@@ -265,12 +271,20 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
             !dataFetched;
 
         if (shouldFetch) {
-            setDataFetched(true); // Mark as fetched to prevent multiple calls
+            setDataFetched(true);
+            setLoading(true);
+            setError(null);
             // Use a small delay to avoid race conditions and ensure session is ready
-            const timer = setTimeout(() => {
-                fetchClasses();
-                fetchStudents();
-                fetchTests();
+            const timer = setTimeout(async () => {
+                try {
+                    await Promise.all([
+                        fetchClasses(true),
+                        fetchStudents(true),
+                        fetchTests(true)
+                    ]);
+                } finally {
+                    setLoading(false);
+                }
             }, 300);
             
             return () => {
@@ -284,25 +298,7 @@ export const useReportManager = (hasSupabase: boolean, userRole?: string, instit
             setDataFetched(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasSupabase, userRole, effectiveProfessorId, institutionId, useCase, supabase, dataFetched]); // Only fetch when IDs are available
-
-    // Additional effect to fetch data when effectiveProfessorId becomes available
-    useEffect(() => {
-        if (!hasSupabase || !useCase || !supabase) return;
-        
-        if (userRole === 'Teacher' && effectiveProfessorId && !dataFetched) {
-            setDataFetched(true); // Mark as fetched
-            // Fetch data when professorId becomes available
-            const timer = setTimeout(() => {
-                fetchClasses();
-                fetchStudents();
-                fetchTests();
-            }, 100);
-            
-            return () => clearTimeout(timer);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [effectiveProfessorId, userRole, hasSupabase, useCase, supabase]);
+    }, [hasSupabase, userRole, effectiveProfessorId, institutionId, useCase, supabase, dataFetched]);
 
     return {
         loading,

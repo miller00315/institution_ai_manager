@@ -93,10 +93,10 @@ const ReportManager: React.FC<ReportManagerProps> = ({
     }, [selectedTestId, reportType, dateFilter, fetchTestReport]);
 
     useEffect(() => {
-        if (institutionId && reportType === 'institution' && userRole === 'Institution' && !loading) {
+        if (institutionId && reportType === 'institution' && userRole === 'Institution') {
             fetchInstitutionReport(institutionId);
         }
-    }, [institutionId, reportType, dateFilter, fetchInstitutionReport, userRole, loading]);
+    }, [institutionId, reportType, dateFilter, fetchInstitutionReport, userRole]);
 
     // Fetch professors for institution when needed
     const professorUseCase = useMemo(() => {
@@ -120,10 +120,10 @@ const ReportManager: React.FC<ReportManagerProps> = ({
 
     // Fetch professor report when selected
     useEffect(() => {
-        if (selectedProfessorId && reportType === 'professor' && userRole === 'Institution' && !loading) {
+        if (selectedProfessorId && reportType === 'professor' && userRole === 'Institution') {
             fetchProfessorReport(selectedProfessorId);
         }
-    }, [selectedProfessorId, reportType, dateFilter, fetchProfessorReport, userRole, loading]);
+    }, [selectedProfessorId, reportType, dateFilter, fetchProfessorReport, userRole]);
 
     const toggleSection = (section: string) => {
         setExpandedSections(prev => ({
@@ -270,20 +270,28 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {classReport.studentsPerformance.map((student) => (
-                                            <tr key={student.studentId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(student.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {student.totalTests}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(student.completionRate)}
+                                        {classReport.studentsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            classReport.studentsPerformance.map((student) => (
+                                                <tr key={student.studentId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(student.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {student.totalTests}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(student.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -316,20 +324,28 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {classReport.testsPerformance.map((test) => (
-                                            <tr key={test.testId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(test.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {test.totalStudents}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(test.completionRate)}
+                                        {classReport.testsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            classReport.testsPerformance.map((test) => (
+                                                <tr key={test.testId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(test.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {test.totalStudents}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(test.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -416,23 +432,31 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {studentReport.testsDetails.map((test, idx) => (
-                                        <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
-                                            <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
-                                            <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                {formatScore(test.score)}
-                                            </td>
-                                            <td className="p-2 text-right text-green-600 dark:text-green-400">
-                                                {test.correctCount}
-                                            </td>
-                                            <td className="p-2 text-right text-red-600 dark:text-red-400">
-                                                {test.errorCount}
-                                            </td>
-                                            <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                {formatDate(test.attemptDate)}
+                                    {studentReport.testsDetails.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                {t('reports.noResultsInPeriod')}
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        studentReport.testsDetails.map((test, idx) => (
+                                            <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
+                                                <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
+                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                    {formatScore(test.score)}
+                                                </td>
+                                                <td className="p-2 text-right text-green-600 dark:text-green-400">
+                                                    {test.correctCount}
+                                                </td>
+                                                <td className="p-2 text-right text-red-600 dark:text-red-400">
+                                                    {test.errorCount}
+                                                </td>
+                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                    {formatDate(test.attemptDate)}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -526,23 +550,31 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {testReport.studentsPerformance.map((student, idx) => (
-                                            <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(student.score)}
-                                                </td>
-                                                <td className="p-2 text-right text-green-600 dark:text-green-400">
-                                                    {student.correctCount}
-                                                </td>
-                                                <td className="p-2 text-right text-red-600 dark:text-red-400">
-                                                    {student.errorCount}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatDate(student.attemptDate)}
+                                        {testReport.studentsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            testReport.studentsPerformance.map((student, idx) => (
+                                                <tr key={idx} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(student.score)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-green-600 dark:text-green-400">
+                                                        {student.correctCount}
+                                                    </td>
+                                                    <td className="p-2 text-right text-red-600 dark:text-red-400">
+                                                        {student.errorCount}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatDate(student.attemptDate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -576,27 +608,35 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {testReport.questionPerformance.map((question, idx) => (
-                                            <tr key={question.questionId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">
-                                                    <div className="max-w-md truncate" title={question.questionContent}>
-                                                        {question.questionContent || `Questão ${idx + 1}`}
-                                                    </div>
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {question.totalAttempts}
-                                                </td>
-                                                <td className="p-2 text-right text-green-600 dark:text-green-400">
-                                                    {question.correctCount}
-                                                </td>
-                                                <td className="p-2 text-right text-red-600 dark:text-red-400">
-                                                    {question.errorCount}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatPercentage(question.successRate)}
+                                        {testReport.questionPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            testReport.questionPerformance.map((question, idx) => (
+                                                <tr key={question.questionId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">
+                                                        <div className="max-w-md truncate" title={question.questionContent}>
+                                                            {question.questionContent || `Questão ${idx + 1}`}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {question.totalAttempts}
+                                                    </td>
+                                                    <td className="p-2 text-right text-green-600 dark:text-green-400">
+                                                        {question.correctCount}
+                                                    </td>
+                                                    <td className="p-2 text-right text-red-600 dark:text-red-400">
+                                                        {question.errorCount}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatPercentage(question.successRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -682,24 +722,32 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {institutionReport.classesPerformance.map((classPerf) => (
-                                            <tr key={classPerf.classId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{classPerf.className}</td>
-                                                <td className="p-2 text-slate-600 dark:text-slate-400">{classPerf.gradeName}</td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {classPerf.totalStudents}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {classPerf.totalTests}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(classPerf.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(classPerf.completionRate)}
+                                        {institutionReport.classesPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            institutionReport.classesPerformance.map((classPerf) => (
+                                                <tr key={classPerf.classId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{classPerf.className}</td>
+                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{classPerf.gradeName}</td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {classPerf.totalStudents}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {classPerf.totalTests}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(classPerf.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(classPerf.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -732,20 +780,28 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {institutionReport.studentsPerformance.map((student) => (
-                                            <tr key={student.studentId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(student.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {student.totalTests}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(student.completionRate)}
+                                        {institutionReport.studentsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            institutionReport.studentsPerformance.map((student) => (
+                                                <tr key={student.studentId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(student.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {student.totalTests}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(student.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -779,21 +835,29 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {institutionReport.testsPerformance.map((test) => (
-                                            <tr key={test.testId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
-                                                <td className="p-2 text-slate-600 dark:text-slate-400">{test.professorName}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(test.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {test.totalStudents}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(test.completionRate)}
+                                        {institutionReport.testsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            institutionReport.testsPerformance.map((test) => (
+                                                <tr key={test.testId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
+                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{test.professorName}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(test.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {test.totalStudents}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(test.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -879,24 +943,32 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {professorReport.classesPerformance.map((classPerf) => (
-                                            <tr key={classPerf.classId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{classPerf.className}</td>
-                                                <td className="p-2 text-slate-600 dark:text-slate-400">{classPerf.gradeName}</td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {classPerf.totalStudents}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {classPerf.totalTests}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(classPerf.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(classPerf.completionRate)}
+                                        {professorReport.classesPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            professorReport.classesPerformance.map((classPerf) => (
+                                                <tr key={classPerf.classId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{classPerf.className}</td>
+                                                    <td className="p-2 text-slate-600 dark:text-slate-400">{classPerf.gradeName}</td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {classPerf.totalStudents}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {classPerf.totalTests}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(classPerf.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(classPerf.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -929,20 +1001,28 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {professorReport.studentsPerformance.map((student) => (
-                                            <tr key={student.studentId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(student.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {student.totalTests}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(student.completionRate)}
+                                        {professorReport.studentsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            professorReport.studentsPerformance.map((student) => (
+                                                <tr key={student.studentId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{student.studentName}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(student.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {student.totalTests}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(student.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -975,20 +1055,28 @@ const ReportManager: React.FC<ReportManagerProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {professorReport.testsPerformance.map((test) => (
-                                            <tr key={test.testId} className="border-b border-slate-100 dark:border-slate-800">
-                                                <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
-                                                <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
-                                                    {formatScore(test.averageScore)}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {test.totalStudents}
-                                                </td>
-                                                <td className="p-2 text-right text-slate-600 dark:text-slate-400">
-                                                    {formatPercentage(test.completionRate)}
+                                        {professorReport.testsPerformance.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-6 text-center text-slate-500 dark:text-slate-400">
+                                                    {t('reports.noResultsInPeriod')}
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            professorReport.testsPerformance.map((test) => (
+                                                <tr key={test.testId} className="border-b border-slate-100 dark:border-slate-800">
+                                                    <td className="p-2 text-slate-900 dark:text-slate-100">{test.testTitle}</td>
+                                                    <td className="p-2 text-right text-slate-900 dark:text-slate-100 font-medium">
+                                                        {formatScore(test.averageScore)}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {test.totalStudents}
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600 dark:text-slate-400">
+                                                        {formatPercentage(test.completionRate)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

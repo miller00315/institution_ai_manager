@@ -699,6 +699,7 @@ export const en = {
     date: 'Date',
     average: 'Average',
     noData: 'No data available for the selected period',
+    noResultsInPeriod: 'No corrected test results in this period. Adjust the start and end dates above to see performance.',
   },
 };
 

@@ -695,6 +695,7 @@ export const es = {
     date: 'Fecha',
     average: 'Promedio',
     noData: 'No hay datos disponibles para el período seleccionado',
+    noResultsInPeriod: 'Sin resultados de pruebas corregidas en este período. Ajuste las fechas de inicio y fin para ver el rendimiento.',
   },
 };
 
