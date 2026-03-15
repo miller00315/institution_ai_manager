@@ -35,6 +35,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | 'All'>('All');
   const [gradeFilter, setGradeFilter] = useState<string>('All');
   const [subjectFilter, setSubjectFilter] = useState<string>('All');
+  const [bnccFilter, setBnccFilter] = useState<string>('All');
   const [showManualModal, setShowManualModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -120,9 +121,11 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
       if (difficultyFilter !== 'All' && q.difficulty !== difficultyFilter) return false;
       if (gradeFilter !== 'All' && q.grade_id !== gradeFilter) return false;
       if (subjectFilter !== 'All' && q.subject !== subjectFilter) return false;
+      if (bnccFilter === '__none__' && q.bncc_id) return false;
+      if (bnccFilter !== 'All' && bnccFilter !== '__none__' && q.bncc_id !== bnccFilter) return false;
       return true;
     });
-  }, [questions, difficultyFilter, gradeFilter, subjectFilter]);
+  }, [questions, difficultyFilter, gradeFilter, subjectFilter, bnccFilter]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage);
@@ -135,7 +138,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
   // Reset page when filters change
   useEffect(() => {
       setCurrentPage(1);
-  }, [difficultyFilter, gradeFilter, subjectFilter]);
+  }, [difficultyFilter, gradeFilter, subjectFilter, bnccFilter]);
 
   const processFileForAI = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) return alert("File max 5MB");
@@ -345,7 +348,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
       <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mr-2 font-medium"><Filter size={20} /><span>Filtros:</span></div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full md:w-auto flex-1">
               <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
                   <option value="All">Todas as Matérias</option>
                   {uniqueSubjects.map(s => <option key={s} value={s}>{s}</option>)}
@@ -357,6 +360,13 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
               <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value as any)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
                   <option value="All">Todas as Dificuldades</option>
                   {['Easy', 'Medium', 'Hard'].map(d => <option key={d} value={d}>{d === 'Easy' ? 'Fácil' : d === 'Medium' ? 'Médio' : 'Difícil'}</option>)}
+              </select>
+              <select value={bnccFilter} onChange={(e) => setBnccFilter(e.target.value)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
+                  <option value="All">Todas as BNCC</option>
+                  <option value="__none__">Sem BNCC</option>
+                  {activeBnccItems.map(b => (
+                    <option key={b.id} value={b.id}>{b.codigo_alfanumerico}{b.descricao_habilidade ? ` – ${b.descricao_habilidade.slice(0, 40)}${b.descricao_habilidade.length > 40 ? '…' : ''}` : ''}</option>
+                  ))}
               </select>
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
