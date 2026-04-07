@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTestManager } from '../presentation/hooks/useTestManager';
 import { useSettingsManager } from '../presentation/hooks/useSettingsManager';
 import { useBNCCManager } from '../presentation/hooks/useBNCCManager';
+import { useAppTranslation } from '../presentation/hooks/useAppTranslation';
 import { Test, Question } from '../types';
 import { 
   FileText, Plus, Calendar, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Eye, EyeOff,
@@ -10,6 +11,7 @@ import {
   AlertTriangle, RotateCcw, Trash2, Scale, Image as ImageIcon, Edit2, Save, Upload, Home, ScrollText
 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
+import { bnccSelectSecondary } from '../utils/bnccDisplay';
 
 interface TestManagerProps {
   hasSupabase: boolean;
@@ -19,6 +21,9 @@ interface TestManagerProps {
 }
 
 const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, initialTestId, onBack }) => {
+  const { t } = useAppTranslation();
+  const difficultyLabel = (d: string) =>
+    d === 'Easy' ? t('question.easy') : d === 'Medium' ? t('question.medium') : d === 'Hard' ? t('question.hard') : d;
   // Filter State for Admin
   const [filterInst, setFilterInst] = useState(institutionId || '');
   
@@ -180,8 +185,8 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!newTest.title || !newTest.professor_id) return alert("Preencha os campos obrigatórios");
-      if (selectedQuestionIds.length === 0) return alert("Selecione pelo menos uma questão");
+      if (!newTest.title || !newTest.professor_id) return alert(t('test.fillRequiredFields'));
+      if (selectedQuestionIds.length === 0) return alert(t('test.selectAtLeastOneQuestion'));
 
       let success = false;
       if (editingTestId) {
@@ -227,7 +232,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
   };
 
   const handleSaveQuestion = async () => {
-      if (!questionForm.content) return alert("Question content is required");
+      if (!questionForm.content) return alert(t('question.questionRequired'));
       setIsSavingQuestion(true);
       try {
           const success = await saveQuestion(
@@ -300,24 +305,24 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           {filteredTests.length === 0 ? (
               <div className="col-span-full py-20 text-center text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
                   <FileText size={48} className="mx-auto mb-4 opacity-50"/>
-                  <p className="font-medium text-lg">Nenhuma prova criada.</p>
-                  <p className="text-sm">Clique em "Criar Nova Prova" para começar.</p>
+                  <p className="font-medium text-lg">{t('test.noTestsCreated')}</p>
+                  <p className="text-sm">{t('test.noTestsCreatedDesc')}</p>
               </div>
           ) : paginatedTests.map(test => (
               <div key={test.id} className={`bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between ${test.deleted ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-red-200 dark:border-red-800' : ''}`}>
                   <div>
                       <div className="flex justify-between items-start mb-2">
                           <div className="flex flex-col">
-                              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded w-fit mb-2 uppercase tracking-wider">{test.school_grades?.name || 'Sem Série'}</span>
+                              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded w-fit mb-2 uppercase tracking-wider">{test.school_grades?.name || t('test.noGrade')}</span>
                               <h3 className="font-bold text-xl text-slate-900 dark:text-slate-100 line-clamp-2">{test.title}</h3>
-                              {test.deleted && <span className="bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase w-fit mt-1">Deletado</span>}
+                              {test.deleted && <span className="bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase w-fit mt-1">{t('test.deletedBadge')}</span>}
                           </div>
                       </div>
                       
                       <div className="space-y-2 mb-6">
                           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                               <User size={16} className="text-slate-400 dark:text-slate-500"/>
-                              <span className="truncate">Prof. {(test as any).professors?.name || 'Desconhecido'}</span>
+                              <span className="truncate">{t('test.profPrefix')} {(test as any).professors?.name || t('test.unknown')}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                               <Calendar size={16} className="text-slate-400 dark:text-slate-500"/>
@@ -328,20 +333,20 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
 
                   <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-700">
                       <button onClick={() => { loadTestDetails(test.id); setView('detail'); }} className="text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors">
-                          Ver Detalhes <ChevronRight size={16}/>
+                          {t('test.viewDetails')} <ChevronRight size={16}/>
                       </button>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {!test.deleted && (
-                              <button onClick={() => handleEditClick(test)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="Editar">
+                              <button onClick={() => handleEditClick(test)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title={t('common.edit')} aria-label={t('common.edit')}>
                                   <Edit2 size={18}/>
                               </button>
                           )}
                           {isAdmin && test.deleted ? (
-                              <button onClick={() => openRestoreModal(test)} className="p-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors" title="Restaurar">
+                              <button onClick={() => openRestoreModal(test)} className="p-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors" title={t('common.restore')} aria-label={t('common.restore')}>
                                   <RotateCcw size={18}/>
                               </button>
                           ) : !test.deleted && (
-                              <button onClick={() => openDeleteModal(test)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Excluir">
+                              <button onClick={() => openDeleteModal(test)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title={t('common.delete')} aria-label={t('common.delete')}>
                                   {deletingId === test.id ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18}/>}
                               </button>
                           )}
@@ -358,62 +363,62 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           {/* Form Side */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-y-auto">
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 mb-4 pb-2 border-b border-slate-100 dark:border-slate-700">
-                  {editingTestId ? 'Editar Prova' : 'Nova Prova'}
+                  {editingTestId ? t('test.edit') : t('test.newTest')}
               </h3>
               <form id="create-test-form" onSubmit={handleCreateSubmit} className="space-y-4">
                   <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">Título da Prova</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">{t('test.testTitle')}</label>
                       <input 
                         required 
                         value={newTest.title} 
                         onChange={e => setNewTest({...newTest, title: e.target.value})} 
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" 
-                        placeholder="Ex: Prova Bimestral de Matemática"
+                        placeholder={t('test.testTitlePlaceholder')}
                       />
                   </div>
                   
                   <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">Instituição</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">{t('test.institution')}</label>
                       <select 
                           disabled={!!institutionId} 
                           value={newTest.institution_id} 
                           onChange={e => setNewTest({...newTest, institution_id: e.target.value})} 
                           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                       >
-                          <option value="">Selecione...</option>
+                          <option value="">{t('test.selectPlaceholder')}</option>
                           {institutions.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                       </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                       <div>
-                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">Professor</label>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">{t('test.professor')}</label>
                           <select required value={newTest.professor_id} onChange={e => setNewTest({...newTest, professor_id: e.target.value})} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100">
-                              <option value="">Selecione...</option>
+                              <option value="">{t('test.selectPlaceholder')}</option>
                               {filteredProfessors.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                       </div>
                       <div>
-                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">Série/Ano</label>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">{t('test.grade')}</label>
                           <select required value={newTest.grade_id} onChange={e => setNewTest({...newTest, grade_id: e.target.value})} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" disabled={!newTest.institution_id}>
-                              <option value="">Selecione...</option>
+                              <option value="">{t('test.selectPlaceholder')}</option>
                               {filteredGrades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                           </select>
                       </div>
                   </div>
 
                   <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">Descrição / Instruções</label>
-                      <textarea value={newTest.description} onChange={e => setNewTest({...newTest, description: e.target.value})} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 h-24 resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" placeholder="Instruções para o aluno..."/>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">{t('test.instructions')}</label>
+                      <textarea value={newTest.description} onChange={e => setNewTest({...newTest, description: e.target.value})} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 h-24 resize-none bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" placeholder={t('test.instructionsPlaceholder')}/>
                   </div>
 
                   <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
                       <div className="flex justify-between items-center mb-2">
-                          <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">Questões Selecionadas</span>
+                          <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{t('test.selectedQuestions')}</span>
                           <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full text-xs font-bold">{selectedQuestionIds.length}</span>
                       </div>
                       {selectedQuestionIds.length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nenhuma questão selecionada no painel à direita.</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 italic">{t('test.noQuestionsSelected')}</p>
                       ) : (
                           <ul className="space-y-2 max-h-60 overflow-y-auto pr-1">
                               {selectedQuestionIds.map((qid, idx) => {
@@ -432,12 +437,13 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                                                       value={questionWeights[qid] || 1} 
                                                       onChange={e => setQuestionWeights({...questionWeights, [qid]: parseInt(e.target.value)})}
                                                       className="w-12 border border-slate-300 dark:border-slate-600 rounded px-1 text-center bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                                                      title="Peso"
+                                                      title={t('test.weight')}
+                                                      aria-label={t('test.weight')}
                                                   />
-                                                  <span className="text-slate-400 dark:text-slate-500">pts</span>
+                                                  <span className="text-slate-400 dark:text-slate-500">{t('test.pts')}</span>
                                               </div>
                                               <button type="button" onClick={() => handleOpenQuestionModal(q)} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold flex items-center gap-1">
-                                                  <Edit2 size={12}/> Editar
+                                                  <Edit2 size={12}/> {t('test.editQuestion')}
                                               </button>
                                           </div>
                                       </li>
@@ -452,27 +458,30 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           {/* Question Picker Side */}
           <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner flex flex-col overflow-hidden">
               <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200 flex items-center gap-2"><BookOpen size={18}/> Banco de Questões</h3>
+                  <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200 flex items-center gap-2"><BookOpen size={18}/> {t('test.questionBank')}</h3>
                   {loadingQuestions && <Loader2 className="animate-spin text-indigo-500" size={18}/>}
               </div>
               <div className="mb-3">
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1"><Filter size={12} className="inline mr-1"/> Filtrar por BNCC</label>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1"><Filter size={12} className="inline mr-1"/> {t('test.filterByBncc')}</label>
                   <select value={bnccFilter} onChange={(e) => setBnccFilter(e.target.value)} className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
-                      <option value="All">Todas as BNCC</option>
-                      <option value="__none__">Sem BNCC</option>
-                      {activeBnccItems.map(b => (
-                        <option key={b.id} value={b.id}>{b.codigo_alfanumerico}{b.descricao_habilidade ? ` – ${b.descricao_habilidade.slice(0, 35)}${b.descricao_habilidade.length > 35 ? '…' : ''}` : ''}</option>
-                      ))}
+                      <option value="All">{t('test.allBncc')}</option>
+                      <option value="__none__">{t('test.noBncc')}</option>
+                      {activeBnccItems.map(b => {
+                        const sub = bnccSelectSecondary(b, 35);
+                        return (
+                        <option key={b.id} value={b.id}>{b.codigo_alfanumerico}{sub ? ` – ${sub}` : ''}</option>
+                        );
+                      })}
                   </select>
               </div>
               <div className="flex-1 overflow-y-auto space-y-3 pr-2">
                   <div className="mb-2">
                       <button onClick={() => handleOpenQuestionModal()} className="w-full py-2 bg-white dark:bg-slate-800 border border-dashed border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center justify-center gap-2">
-                          <Plus size={14}/> Criar Nova Questão
+                          <Plus size={14}/> {t('test.createNewQuestion')}
                       </button>
                   </div>
                   {filteredAvailableQuestions.length === 0 && !loadingQuestions && (
-                      <div className="text-center py-10 text-slate-400 dark:text-slate-500">Nenhuma questão disponível.</div>
+                      <div className="text-center py-10 text-slate-400 dark:text-slate-500">{t('test.noQuestionsAvailable')}</div>
                   )}
                   {filteredAvailableQuestions.map(q => (
                       <div 
@@ -482,10 +491,10 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                       >
                           <div className="flex flex-wrap justify-between items-start gap-1 mb-2">
                               <div className="flex items-center gap-1 flex-wrap">
-                                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${q.difficulty === 'Hard' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'}`}>{q.difficulty}</span>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${q.difficulty === 'Hard' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' : q.difficulty === 'Medium' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'}`}>{difficultyLabel(q.difficulty)}</span>
                                   <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">{q.subject}</span>
                                   {(q.bncc || q.bncc_id) && (
-                                    <span className="text-[10px] text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded flex items-center gap-0.5"><ScrollText size={10}/> {q.bncc?.codigo_alfanumerico || 'BNCC'}</span>
+                                    <span className="text-[10px] text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded flex items-center gap-0.5"><ScrollText size={10}/> {q.bncc?.codigo_alfanumerico || t('question.bncc.linkedShort')}</span>
                                   )}
                               </div>
                           </div>
@@ -503,13 +512,13 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           return (
               <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm h-[600px]">
                   <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mb-4" size={48}/>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50">Carregando Prova...</h3>
-                  <p className="text-slate-600 dark:text-slate-300">Buscando questões e detalhes.</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50">{t('test.loadingTest')}</h3>
+                  <p className="text-slate-600 dark:text-slate-300">{t('test.loadingTestDesc')}</p>
               </div>
           );
       }
 
-      if (!selectedTest) return <div className="p-8 text-center text-slate-700 dark:text-slate-300">Prova não encontrada.</div>;
+      if (!selectedTest) return <div className="p-8 text-center text-slate-700 dark:text-slate-300">{t('test.testNotFound')}</div>;
 
       return (
           <div>
@@ -526,16 +535,16 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                           </span>
                       </div>
                       <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-2">{selectedTest.title}</h1>
-                      <p className="text-slate-700 dark:text-slate-200 max-w-2xl">{selectedTest.description || "Sem descrição."}</p>
+                      <p className="text-slate-700 dark:text-slate-200 max-w-2xl">{selectedTest.description || t('test.noDescription')}</p>
                       
                       <div className="flex items-center gap-4 mt-4 text-sm font-medium text-slate-600 dark:text-slate-300">
-                          <span className="flex items-center gap-1"><User size={16}/> Prof. {(selectedTest as any).professors?.name}</span>
-                          <span className="flex items-center gap-1"><HelpCircle size={16}/> {selectedTest.questions?.length || 0} Questões</span>
-                          <span className="flex items-center gap-1"><Scale size={16}/> Total Pontos: {selectedTest.questions?.reduce((acc, q) => acc + (q.weight || 1), 0)}</span>
+                          <span className="flex items-center gap-1"><User size={16}/> {t('test.profPrefix')} {(selectedTest as any).professors?.name}</span>
+                          <span className="flex items-center gap-1"><HelpCircle size={16}/> {selectedTest.questions?.length || 0} {t('test.questions')}</span>
+                          <span className="flex items-center gap-1"><Scale size={16}/> {t('test.totalPoints')}: {selectedTest.questions?.reduce((acc, q) => acc + (q.weight || 1), 0)}</span>
                       </div>
                   </div>
                   <button onClick={handlePrint} className="bg-slate-800 dark:bg-slate-600 hover:bg-slate-900 dark:hover:bg-slate-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all print:hidden">
-                      <Printer size={20}/> Imprimir Prova
+                      <Printer size={20}/> {t('test.printTest')}
                   </button>
               </div>
 
@@ -543,7 +552,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
               <div className="p-8 space-y-8 print:p-0 bg-white dark:bg-slate-800">
                   {selectedTest.questions?.length === 0 ? (
                       <div className="text-center py-12 text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl">
-                          Nenhuma questão vinculada a esta prova.
+                          {t('test.noQuestionsLinked')}
                       </div>
                   ) : (
                       selectedTest.questions?.map((q, idx) => (
@@ -555,12 +564,12 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                                   <div className="flex-1">
                                       <div className="mb-3 text-slate-900 dark:text-slate-50 text-lg leading-relaxed font-medium">
                                           {q.content}
-                                          {q.weight && <span className="ml-2 text-xs text-slate-500 dark:text-slate-400 font-normal print:hidden">({q.weight} pts)</span>}
+                                          {q.weight && <span className="ml-2 text-xs text-slate-500 dark:text-slate-400 font-normal print:hidden">({q.weight} {t('test.pts')})</span>}
                                       </div>
                                       
                                       {q.image_url && (
                                           <div className="mb-4">
-                                              <img src={q.image_url} alt="Referência" className="max-h-64 rounded-lg border border-slate-300 dark:border-slate-600 object-contain bg-slate-100 dark:bg-slate-900/70 print:border-0" />
+                                              <img src={q.image_url} alt={t('test.imageAltReference')} className="max-h-64 rounded-lg border border-slate-300 dark:border-slate-600 object-contain bg-slate-100 dark:bg-slate-900/70 print:border-0" />
                                           </div>
                                       )}
 
@@ -583,7 +592,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
 
               {/* Print Footer Only */}
               <div className="hidden print:block mt-8 pt-8 border-t border-black text-center text-xs">
-                  <p>Gerado por EduTest AI • {new Date().getFullYear()}</p>
+                  <p>{t('test.printFooter', { year: new Date().getFullYear() })}</p>
               </div>
               </div>
           </div>
@@ -597,21 +606,21 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
               <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
-                      <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{editingQuestionId ? 'Editar Questão' : 'Nova Questão'}</h3>
+                      <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{editingQuestionId ? t('question.edit') : t('question.create')}</h3>
                       <button onClick={() => setQuestionModalOpen(false)}><X size={20} className="text-slate-500 dark:text-slate-400"/></button>
                   </div>
                   <div className="p-6 overflow-y-auto space-y-4 bg-white dark:bg-slate-800">
                       <div>
-                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Enunciado</label>
+                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{t('question.content')}</label>
                           <textarea 
                               value={questionForm.content} 
                               onChange={e => setQuestionForm({...questionForm, content: e.target.value})}
                               className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500 h-24 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                              placeholder="Digite a pergunta..."
+                              placeholder={t('question.contentPlaceholder')}
                           />
                       </div>
                       <div>
-                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Imagem (Opcional)</label>
+                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{t('question.image')}</label>
                           <div className="flex gap-4 items-center">
                               <div 
                                   onClick={() => questionImageRef.current?.click()}
@@ -629,11 +638,11 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                                       }
                                   }}/>
                               </div>
-                              {questionForm.imageUrl && <button onClick={() => setQuestionForm({...questionForm, image: null, imageUrl: null})} className="text-xs text-red-500 dark:text-red-400 hover:underline">Remover</button>}
+                              {questionForm.imageUrl && <button onClick={() => setQuestionForm({...questionForm, image: null, imageUrl: null})} className="text-xs text-red-500 dark:text-red-400 hover:underline">{t('question.removeImage')}</button>}
                           </div>
                       </div>
                       <div className="space-y-2">
-                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Opções</label>
+                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{t('question.options')}</label>
                           {questionForm.options.map((opt, idx) => (
                               <div key={idx} className={`flex items-center gap-2 p-2 rounded border ${opt.is_correct ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
                                   <input 
@@ -655,16 +664,16 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                                           setQuestionForm({...questionForm, options: newOpts});
                                       }}
                                       className="flex-1 bg-transparent outline-none text-sm text-slate-900 dark:text-slate-100"
-                                      placeholder="Texto da opção..."
+                                      placeholder={t('question.optionPlaceholder')}
                                   />
                               </div>
                           ))}
                       </div>
                   </div>
                   <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-end gap-2">
-                      <button onClick={() => setQuestionModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
+                      <button onClick={() => setQuestionModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                       <button onClick={handleSaveQuestion} disabled={isSavingQuestion} className="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-70 flex items-center gap-2">
-                          {isSavingQuestion ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Salvar Questão
+                          {isSavingQuestion ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} {t('question.saveQuestion')}
                       </button>
                   </div>
               </div>
@@ -672,14 +681,14 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
       );
   };
 
-  if (!hasSupabase) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 m-4">Configure o banco de dados primeiro.</div>;
+  if (!hasSupabase) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 m-4">{t('test.configureDbFirst')}</div>;
 
   return (
       <div className="space-y-8">
           <div className="flex justify-between items-center print:hidden">
               <div>
-                  <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{view === 'create' ? (editingTestId ? 'Editar Prova' : 'Criar Nova Prova') : (view === 'detail' ? 'Visualizar Prova' : 'Gerenciador de Provas')}</h2>
-                  <p className="text-slate-500 dark:text-slate-400 mt-1">Crie, imprima e gerencie avaliações acadêmicas</p>
+                  <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{view === 'create' ? (editingTestId ? t('test.edit') : t('test.create')) : (view === 'detail' ? t('test.view') : t('test.title'))}</h2>
+                  <p className="text-slate-500 dark:text-slate-400 mt-1">{t('test.subtitle')}</p>
               </div>
               <div className="flex items-center gap-4">
                   {isAdmin && view === 'list' && !loading && hasInstitutionContext && (
@@ -690,26 +699,26 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                               onChange={e => setShowDeleted(e.target.checked)} 
                               className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
                           />
-                          <span className="font-bold">Mostrar Excluídos</span>
+                          <span className="font-bold">{t('common.showDeleted')}</span>
                       </label>
                   )}
                   {view === 'list' && !loading && (hasInstitutionContext || !isAdmin) && (
                       <>
                           <button onClick={refresh} className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2">
-                              <RotateCcw size={18}/> Atualizar
+                              <RotateCcw size={18}/> {t('common.refresh')}
                           </button>
                           <button onClick={() => { 
                               resetForm();
                               fetchQuestions(); // Lazy load questions
                               setView('create'); 
                           }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all">
-                              <Plus size={20}/> Criar Nova Prova
+                              <Plus size={20}/> {t('test.create')}
                           </button>
                       </>
                   )}
                   {view === 'create' && (
                       <button form="create-test-form" type="submit" disabled={isCreating} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all disabled:opacity-70">
-                          {isCreating ? <Loader2 className="animate-spin" size={20}/> : <CheckCircle size={20}/>} {editingTestId ? 'Atualizar Prova' : 'Salvar Prova'}
+                          {isCreating ? <Loader2 className="animate-spin" size={20}/> : <CheckCircle size={20}/>} {editingTestId ? t('test.updateTest') : t('test.saveTest')}
                       </button>
                   )}
                   {view !== 'list' && (
@@ -721,7 +730,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                               resetForm();
                           }
                       }} className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold flex items-center gap-2 transition-all px-4 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700">
-                          <ArrowLeft size={20}/> Voltar
+                          <ArrowLeft size={20}/> {t('common.back')}
                       </button>
                   )}
               </div>
@@ -730,7 +739,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           {/* Institution Selector for Admin Only (not loading, has multiple institutions) */}
           {!isManagerMode && !loading && isAdmin && view === 'list' && (
               <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm print:hidden">
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Contexto da Instituição</label>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{t('institution.institutionContext')}</label>
                   <div className="relative">
                       <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"/>
                       <select 
@@ -741,7 +750,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                           }} 
                           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg pl-10 pr-4 py-2 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
                       >
-                          <option value="">Selecione a Instituição</option>
+                          <option value="">{t('institution.selectInstitution')}</option>
                           {institutions.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                       </select>
                   </div>
@@ -752,8 +761,8 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           {loading && view === 'list' && (
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-12 text-center">
                   <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mx-auto mb-4" size={48}/>
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">Carregando...</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">Buscando dados do gerenciador de provas.</p>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">{t('common.loading')}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">{t('test.loadingTestData')}</p>
               </div>
           )}
 
@@ -761,8 +770,8 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
           {!hasInstitutionContext && !loading && isAdmin && view === 'list' && (
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-8 text-center">
                   <Building2 size={48} className="mx-auto text-amber-400 dark:text-amber-500 mb-4"/>
-                  <h3 className="text-lg font-bold text-amber-800 dark:text-amber-300 mb-2">Nenhuma Instituição Selecionada</h3>
-                  <p className="text-amber-600 dark:text-amber-400 text-sm">Selecione uma instituição acima para visualizar e gerenciar as provas.</p>
+                  <h3 className="text-lg font-bold text-amber-800 dark:text-amber-300 mb-2">{t('institution.noInstitutionSelected')}</h3>
+                  <p className="text-amber-600 dark:text-amber-400 text-sm">{t('institution.noInstitutionSelectedDesc')}</p>
               </div>
           )}
 
@@ -770,13 +779,14 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
               isOpen={modalConfig.isOpen}
               onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
               onConfirm={executeAction}
-              title={modalConfig.action === 'delete' ? "Excluir Prova" : "Restaurar Prova"}
+              title={modalConfig.action === 'delete' ? t('test.deleteTitle') : t('test.restoreTitle')}
               message={
                   modalConfig.action === 'delete'
-                  ? <span>Tem certeza de que deseja excluir <strong>{modalConfig.name}</strong>? Esta é uma exclusão lógica (soft delete).</span>
-                  : <span>Restaurar <strong>{modalConfig.name}</strong>?</span>
+                  ? <span>{t('test.deleteMessage', { name: modalConfig.name })}</span>
+                  : <span>{t('test.restoreMessage', { name: modalConfig.name })}</span>
               }
-              confirmLabel={modalConfig.action === 'delete' ? "Excluir" : "Restaurar"}
+              confirmLabel={modalConfig.action === 'delete' ? t('common.delete') : t('common.restore')}
+              cancelLabel={t('common.cancel')}
               isDestructive={modalConfig.action === 'delete'}
               isLoading={isActionLoading}
           />
@@ -800,7 +810,7 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                       {/* Items per page selector and info */}
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Itens por página:</span>
+                          <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{t('common.pagination.itemsPerPage')}</span>
                           <select
                             value={itemsPerPage}
                             onChange={(e) => {
@@ -816,7 +826,12 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                           </select>
                         </div>
                         <span className="text-sm text-slate-500 dark:text-slate-400">
-                          Mostrando {startIndex + 1} - {Math.min(endIndex, filteredTests.length)} de {filteredTests.length} prova{filteredTests.length !== 1 ? 's' : ''}
+                          {t('test.showingTests', {
+                            start: startIndex + 1,
+                            end: Math.min(endIndex, filteredTests.length),
+                            total: filteredTests.length,
+                            unit: filteredTests.length !== 1 ? t('test.testUnitPlural') : t('test.testUnit'),
+                          })}
                         </span>
                       </div>
 
@@ -826,7 +841,8 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                           onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                           disabled={currentPage === 1}
                           className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title="Página anterior"
+                          title={t('common.pagination.prevPage')}
+                          aria-label={t('common.pagination.prevPage')}
                         >
                           <ChevronLeft size={18} />
                         </button>
@@ -865,14 +881,15 @@ const TestManager: React.FC<TestManagerProps> = ({ hasSupabase, institutionId, i
                           onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                           disabled={currentPage === totalPages}
                           className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          title="Próxima página"
+                          title={t('common.pagination.nextPage')}
+                          aria-label={t('common.pagination.nextPage')}
                         >
                           <ChevronRight size={18} />
                         </button>
 
                         {/* Jump to page */}
                         <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-300 dark:border-slate-600">
-                          <span className="text-xs text-slate-500 dark:text-slate-400">Ir para:</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{t('common.pagination.goTo')}</span>
                           <input
                             type="number"
                             min={1}

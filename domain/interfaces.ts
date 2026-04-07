@@ -165,12 +165,9 @@ export interface ILibraryRepository {
     restoreItem(id: string): Promise<void>;
 }
 
+/** Somente leitura: cadastro da BNCC é feito fora deste app. */
 export interface IBNCCRepository {
     getAll(includeDeleted?: boolean): Promise<BNCCItem[]>;
-    create(item: Partial<BNCCItem>): Promise<void>;
-    update(id: string, item: Partial<BNCCItem>): Promise<void>;
-    delete(id: string): Promise<void>;
-    restore(id: string): Promise<void>;
 }
 
 export interface IClassroomRoomRepository {

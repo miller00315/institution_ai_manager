@@ -17,6 +17,10 @@ import {
 } from '../../types';
 import { generateQuestionsWithAI, analyzeAnswerSheet, embedText, chatWithAgent } from '../services/geminiService';
 
+/** Select aninhado alinhado ao schema normalizado de `bncc` e tabelas relacionadas. */
+const BNCC_DETAIL_SELECT =
+    'id, codigo_alfanumerico, created_at, deleted, curriculum_component_id, discipline_reference_id, teaching_stage_id, specific_skills_id, curriculum_component(id, name, description), discipline_reference(id, name, description), teaching_stage(id, name, description), specific_skills(id, name, description, hability_id, habilities(id, name, description))';
+
 // Classe de erro customizada para violações de dependência
 export class DependencyError extends Error {
     constructor(message: string) {
@@ -35,7 +39,7 @@ export class QuestionRepositoryImpl implements IQuestionRepository {
                 *,
                 question_options(*),
                 school_grades(name),
-                bncc(id, codigo_alfanumerico, descricao_habilidade, ano_serie, componente_curricular, unidade_tematica)
+                bncc(${BNCC_DETAIL_SELECT})
             `);
 
         if (!includeDeleted) {
@@ -2038,37 +2042,11 @@ export class BNCCRepositoryImpl implements IBNCCRepository {
     constructor(private supabase: SupabaseClient) { }
 
     async getAll(includeDeleted = false): Promise<BNCCItem[]> {
-        let query = this.supabase.from('bncc').select('*');
+        let query = this.supabase.from('bncc').select(BNCC_DETAIL_SELECT);
         if (!includeDeleted) query = query.eq('deleted', false);
         const { data, error } = await query.order('codigo_alfanumerico', { ascending: true });
         if (error) throw error;
         return data as BNCCItem[];
-    }
-
-    async create(item: Partial<BNCCItem>): Promise<void> {
-        await this.supabase.from('bncc').insert(item);
-    }
-
-    async update(id: string, item: Partial<BNCCItem>): Promise<void> {
-        await this.supabase.from('bncc').update(item).eq('id', id);
-    }
-
-    async delete(id: string): Promise<void> {
-        // Check for disciplines using this BNCC code (via disciplines_bnccs junction table)
-        const { count: disciplineCount } = await this.supabase
-            .from('disciplines_bnccs')
-            .select('discipline_id', { count: 'exact', head: true })
-            .eq('bncc_id', id);
-
-        if (disciplineCount && disciplineCount > 0) {
-            throw new DependencyError(`Não é possível excluir este código BNCC. Existem ${disciplineCount} disciplina(s) vinculada(s). Remova a referência das disciplinas primeiro.`);
-        }
-
-        await this.supabase.from('bncc').update({ deleted: true }).eq('id', id);
-    }
-
-    async restore(id: string): Promise<void> {
-        await this.supabase.from('bncc').update({ deleted: false }).eq('id', id);
     }
 }
 

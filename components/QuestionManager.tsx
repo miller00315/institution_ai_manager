@@ -1,15 +1,18 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuestionManager } from '../presentation/hooks/useQuestionManager';
 import { useSettingsManager } from '../presentation/hooks/useSettingsManager';
 import { useBNCCManager } from '../presentation/hooks/useBNCCManager';
-import { Question, AIQuestionParams, Difficulty } from '../types';
+import { useAppTranslation } from '../presentation/hooks/useAppTranslation';
+import { Question, AIQuestionParams, Difficulty, BNCCItem } from '../types';
 import { parseFile } from '../services/fileParser';
 import { 
   Sparkles, Plus, Trash2, Check, AlertTriangle, Loader2, FileQuestion, X, Save,
   BookOpen, Filter, Pencil, Upload, FileText, CheckCircle, RotateCcw, Image as ImageIcon, ChevronLeft, ChevronRight, ScrollText
 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
+import { bnccDetailRows, bnccSelectSecondary } from '../utils/bnccDisplay';
 
 interface QuestionManagerProps {
   hasSupabase: boolean;
@@ -25,6 +28,7 @@ interface ManualQuestionState {
 }
 
 const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
+  const { t } = useAppTranslation();
   const { 
     questions, loading, error, isGenerating, generateAI, saveManual, deleteQuestion, restoreQuestion, refresh, isAdmin, showDeleted, setShowDeleted
   } = useQuestionManager(hasSupabase);
@@ -52,6 +56,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
       contentSample: string;
   }>({ isOpen: false, id: null, action: 'delete', contentSample: '' });
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [bnccModal, setBnccModal] = useState<{ bncc: BNCCItem } | { missingId: string } | null>(null);
 
   // Image Upload State
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -81,25 +86,14 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
     return null;
   };
 
-  const showBnccDetails = (q: Question) => {
+  const openBnccDetails = (q: Question) => {
     const bncc = getBnccForQuestion(q);
-    if (!bncc) {
-      if (q.bncc_id) {
-        alert('BNCC vinculada (ID: ' + q.bncc_id + '). Detalhes não disponíveis.');
-      }
-      return;
-    }
-    const parts = [
-      'Detalhes da BNCC',
-      '────────────────────────────',
-      'Código: ' + (bncc.codigo_alfanumerico || '—'),
-      bncc.ano_serie ? 'Ano/Série: ' + bncc.ano_serie : '',
-      bncc.componente_curricular ? 'Componente curricular: ' + bncc.componente_curricular : '',
-      bncc.unidade_tematica ? 'Unidade temática: ' + bncc.unidade_tematica : '',
-      bncc.descricao_habilidade ? '\nDescrição da habilidade:\n' + bncc.descricao_habilidade : ''
-    ].filter(Boolean);
-    alert(parts.join('\n'));
+    if (bncc) setBnccModal({ bncc });
+    else if (q.bncc_id) setBnccModal({ missingId: q.bncc_id });
   };
+
+  const difficultyLabel = (d: Difficulty) =>
+    d === 'Easy' ? t('question.easy') : d === 'Medium' ? t('question.medium') : t('question.hard');
   
   const [aiMode, setAiMode] = useState<'topic' | 'document'>('topic');
   const [aiParams, setAiParams] = useState<AIQuestionParams>({
@@ -141,22 +135,22 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
   }, [difficultyFilter, gradeFilter, subjectFilter, bnccFilter]);
 
   const processFileForAI = async (file: File) => {
-    if (file.size > 5 * 1024 * 1024) return alert("File max 5MB");
+    if (file.size > 5 * 1024 * 1024) return alert(t('question.alerts.fileMaxMb'));
     setUploadedFileName(file.name);
     setIsParsing(true);
     try {
       const text = await parseFile(file);
       setAiParams(prev => ({ ...prev, sourceText: text }));
     } catch (err: any) {
-      alert(`Error parsing: ${err.message}`);
+      alert(t('question.alerts.parseError', { message: err?.message || String(err) }));
     } finally {
       setIsParsing(false);
     }
   };
 
   const handleGenerateAI = async () => {
-    if (aiMode === 'document' && !aiParams.sourceText) return alert("Upload document first");
-    if (!aiParams.gradeId) return alert("Select a grade first");
+    if (aiMode === 'document' && !aiParams.sourceText) return alert(t('question.alerts.uploadDocumentFirst'));
+    if (!aiParams.gradeId) return alert(t('question.alerts.selectGradeFirst'));
     
     const selectedGrade = grades.find(g => g.id === aiParams.gradeId);
     
@@ -171,9 +165,9 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
   };
 
   const handleManualSave = async () => {
-    if (!manualQuestion.content.trim() || !manualQuestion.subject.trim()) return alert("Fill fields");
-    if (!manualQuestion.grade_id) return alert("Select a grade");
-    if (!manualQuestion.options.some(opt => opt.is_correct)) return alert("Mark correct option");
+    if (!manualQuestion.content.trim() || !manualQuestion.subject.trim()) return alert(t('question.alerts.fillContentSubject'));
+    if (!manualQuestion.grade_id) return alert(t('question.alerts.selectGrade'));
+    if (!manualQuestion.options.some(opt => opt.is_correct)) return alert(t('question.alerts.markCorrectOption'));
     
     setIsSaving(true);
     try {
@@ -299,19 +293,19 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 mx-4 mt-4">
         <AlertTriangle className="text-amber-500 dark:text-amber-400 mb-4" size={48} />
-        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Conexão com Banco de Dados Necessária</h3>
+        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{t('question.dbRequiredTitle')}</h3>
       </div>
     );
   }
 
-  const getGradeLabel = (g: any) => `${g.name} (${g.institutions?.name || 'Unassigned'})`;
+  const getGradeLabel = (g: any) => `${g.name} (${g.institutions?.name || t('question.unassignedGrade')})`;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Banco de Questões</h2>
-           <p className="text-slate-500 dark:text-slate-400 mt-1">Crie e gerencie seu conteúdo curricular</p>
+           <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{t('question.title')}</h2>
+           <p className="text-slate-500 dark:text-slate-400 mt-1">{t('question.bankSubtitle')}</p>
         </div>
         <div className="flex gap-3">
           {isAdmin && (
@@ -322,11 +316,11 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                       onChange={e => setShowDeleted(e.target.checked)} 
                       className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
                   />
-                  <span className="font-bold">Mostrar Excluídos</span>
+                  <span className="font-bold">{t('common.showDeleted')}</span>
               </label>
           )}
-          <button onClick={resetAiModal} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-indigo-200 transition-all"><Sparkles size={18} /><span>Gerar com IA</span></button>
-          <button onClick={() => setShowManualModal(true)} className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-5 py-2.5 rounded-xl font-semibold transition-all"><Plus size={18} /><span>Adicionar Manual</span></button>
+          <button onClick={resetAiModal} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-indigo-200 transition-all"><Sparkles size={18} /><span>{t('question.generateWithAi')}</span></button>
+          <button onClick={() => setShowManualModal(true)} className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-5 py-2.5 rounded-xl font-semibold transition-all"><Plus size={18} /><span>{t('question.addManual')}</span></button>
         </div>
       </div>
 
@@ -334,43 +328,49 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
           isOpen={modalConfig.isOpen}
           onClose={() => setModalConfig({ isOpen: false, id: null, action: 'delete', contentSample: '' })}
           onConfirm={executeAction}
-          title={modalConfig.action === 'delete' ? "Excluir Questão" : "Restaurar Questão"}
+          title={modalConfig.action === 'delete' ? t('question.deleteConfirmTitle') : t('question.restoreConfirmTitle')}
           message={
               modalConfig.action === 'delete'
-              ? <span>Tem certeza de que deseja excluir esta questão?<br/><br/><em className="text-slate-500">"{modalConfig.contentSample}..."</em></span>
-              : <span>Restaurar esta questão?<br/><br/><em className="text-slate-500">"{modalConfig.contentSample}..."</em></span>
+              ? <span>{t('question.deleteConfirmIntro')}<br/><br/><em className="text-slate-500">"{modalConfig.contentSample}..."</em></span>
+              : <span>{t('question.restoreConfirmIntro')}<br/><br/><em className="text-slate-500">"{modalConfig.contentSample}..."</em></span>
           }
-          confirmLabel={modalConfig.action === 'delete' ? "Excluir" : "Restaurar"}
+          confirmLabel={modalConfig.action === 'delete' ? t('common.delete') : t('common.restore')}
+          cancelLabel={t('common.cancel')}
           isDestructive={modalConfig.action === 'delete'}
           isLoading={isActionLoading}
       />
 
       <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mr-2 font-medium"><Filter size={20} /><span>Filtros:</span></div>
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mr-2 font-medium"><Filter size={20} /><span>{t('question.filtersLabel')}</span></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full md:w-auto flex-1">
               <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
-                  <option value="All">Todas as Matérias</option>
+                  <option value="All">{t('question.filters.allSubjects')}</option>
                   {uniqueSubjects.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
-                  <option value="All">Todas as Séries</option>
+                  <option value="All">{t('question.filters.allGrades')}</option>
                   {grades.map(g => <option key={g.id} value={g.id}>{getGradeLabel(g)}</option>)}
               </select>
               <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value as any)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
-                  <option value="All">Todas as Dificuldades</option>
-                  {['Easy', 'Medium', 'Hard'].map(d => <option key={d} value={d}>{d === 'Easy' ? 'Fácil' : d === 'Medium' ? 'Médio' : 'Difícil'}</option>)}
+                  <option value="All">{t('question.filters.allDifficulties')}</option>
+                  {(['Easy', 'Medium', 'Hard'] as Difficulty[]).map(d => <option key={d} value={d}>{difficultyLabel(d)}</option>)}
               </select>
               <select value={bnccFilter} onChange={(e) => setBnccFilter(e.target.value)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm">
-                  <option value="All">Todas as BNCC</option>
-                  <option value="__none__">Sem BNCC</option>
-                  {activeBnccItems.map(b => (
-                    <option key={b.id} value={b.id}>{b.codigo_alfanumerico}{b.descricao_habilidade ? ` – ${b.descricao_habilidade.slice(0, 40)}${b.descricao_habilidade.length > 40 ? '…' : ''}` : ''}</option>
-                  ))}
+                  <option value="All">{t('question.filters.allBncc')}</option>
+                  <option value="__none__">{t('question.filters.noBncc')}</option>
+                  {activeBnccItems.map(b => {
+                    const sub = bnccSelectSecondary(b, 40);
+                    return (
+                      <option key={b.id} value={b.id}>{b.codigo_alfanumerico}{sub ? ` – ${sub}` : ''}</option>
+                    );
+                  })}
               </select>
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            {filteredQuestions.length} {filteredQuestions.length !== 1 ? 'questões' : 'questão'} encontrada{filteredQuestions.length !== 1 ? 's' : ''}
+            {filteredQuestions.length === 1
+              ? t('question.foundOne', { count: filteredQuestions.length })
+              : t('question.foundMany', { count: filteredQuestions.length })}
           </div>
         </div>
       </div>
@@ -380,23 +380,23 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
             {/* ... Conteúdo do Modal ... */}
             <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0 bg-slate-50 dark:bg-slate-900">
-               <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100">{editingId ? 'Editar Questão' : 'Criar Nova Questão'}</h3>
+               <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100">{editingId ? t('question.edit') : t('question.create')}</h3>
                <button onClick={closeManualModal} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={24} className="text-slate-500 dark:text-slate-400"/></button>
             </div>
             <div className="p-8 space-y-6 overflow-y-auto">
                <div>
-                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Conteúdo da Questão</label>
+                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{t('question.content')}</label>
                    <textarea 
                         value={manualQuestion.content} 
                         onChange={e => setManualQuestion({...manualQuestion, content: e.target.value})} 
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-4 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all min-h-[120px] text-lg shadow-sm" 
-                        placeholder="Digite sua pergunta aqui..." 
+                        placeholder={t('question.contentPlaceholder')} 
                    />
                </div>
 
                {/* Área de Upload de Imagem */}
                <div>
-                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Imagem da Questão (Opcional)</label>
+                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{t('question.image')}</label>
                    <div className="flex gap-4 items-start">
                        <div 
                            onClick={() => imageInputRef.current?.click()}
@@ -407,19 +407,19 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                            ) : (
                                <>
                                    <ImageIcon size={24} className="text-slate-400 dark:text-slate-500 mb-1"/>
-                                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">Upload</span>
+                                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">{t('question.uploadLabel')}</span>
                                </>
                            )}
                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
                        </div>
                        {imagePreview && (
                            <div className="flex flex-col gap-2">
-                               <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Imagem Selecionada</p>
+                               <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('question.selectedImage')}</p>
                                <button 
                                    onClick={() => { setImageFile(null); setImagePreview(null); if(imageInputRef.current) imageInputRef.current.value=''; }} 
                                    className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
                                >
-                                   <Trash2 size={12}/> Remover Imagem
+                                   <Trash2 size={12}/> {t('question.removeImage')}
                                </button>
                            </div>
                        )}
@@ -428,7 +428,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Matéria</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{t('question.subject')}</label>
                       <input 
                         value={manualQuestion.subject} 
                         onChange={e => setManualQuestion({...manualQuestion, subject: e.target.value})} 
@@ -437,43 +437,46 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                       />
                   </div>
                   <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Dificuldade</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{t('question.difficulty')}</label>
                       <select 
                         value={manualQuestion.difficulty} 
                         onChange={e => setManualQuestion({...manualQuestion, difficulty: e.target.value as any})} 
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-700 shadow-sm"
                       >
-                          {['Easy','Medium','Hard'].map(d => <option key={d} value={d}>{d === 'Easy' ? 'Fácil' : d === 'Medium' ? 'Médio' : 'Difícil'}</option>)}
+                          {(['Easy','Medium','Hard'] as Difficulty[]).map(d => <option key={d} value={d}>{difficultyLabel(d)}</option>)}
                       </select>
                   </div>
                   <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Série/Ano</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{t('question.gradeLabel')}</label>
                       <select 
                         value={manualQuestion.grade_id} 
                         onChange={e => setManualQuestion({...manualQuestion, grade_id: e.target.value})} 
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-700 shadow-sm"
                       >
-                          <option value="">Selecionar Série</option>
+                          <option value="">{t('question.selectGrade')}</option>
                           {grades.map(g => <option key={g.id} value={g.id}>{getGradeLabel(g)}</option>)}
                       </select>
                   </div>
                   <div className="md:col-span-3">
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><ScrollText size={16} /> BNCC (habilidade)</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><ScrollText size={16} /> {t('question.bnccLabel')}</label>
                       <select 
                         value={manualQuestion.bncc_id} 
                         onChange={e => setManualQuestion({...manualQuestion, bncc_id: e.target.value})} 
                         className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-700 shadow-sm"
                       >
-                          <option value="">Nenhum / Opcional</option>
-                          {activeBnccItems.map(b => (
-                              <option key={b.id} value={b.id}>{b.codigo_alfanumerico} – {b.descricao_habilidade?.slice(0, 60) || b.componente_curricular || b.id}{b.descricao_habilidade && b.descricao_habilidade.length > 60 ? '…' : ''}</option>
-                          ))}
+                          <option value="">{t('question.bnccOptional')}</option>
+                          {activeBnccItems.map(b => {
+                              const sub = bnccSelectSecondary(b, 60);
+                              return (
+                              <option key={b.id} value={b.id}>{b.codigo_alfanumerico}{sub ? ` – ${sub}` : ''}</option>
+                              );
+                          })}
                       </select>
                   </div>
                </div>
 
                <div className="space-y-4">
-                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">Opções de Resposta (Selecione a Correta)</label>
+                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">{t('question.options')}</label>
                  {manualQuestion.options.map((opt, i) => (
                     <div key={i} className={`flex items-center gap-3 p-3 border rounded-lg transition-colors ${opt.is_correct ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 ring-1 ring-emerald-300 dark:ring-emerald-700' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600'}`}>
                         <div className="relative flex items-center justify-center">
@@ -497,18 +500,18 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                                 setManualQuestion({...manualQuestion, options: opts});
                             }} 
                             className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium" 
-                            placeholder={`Conteúdo da opção...`} 
+                            placeholder={t('question.optionPlaceholder')} 
                         />
-                        {opt.is_correct && <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded">Correta</span>}
+                        {opt.is_correct && <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded">{t('question.optionCorrectShort')}</span>}
                     </div>
                  ))}
                </div>
             </div>
             <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-end gap-3">
-               <button onClick={closeManualModal} disabled={isSaving} className="px-6 py-2.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50">Cancelar</button>
+               <button onClick={closeManualModal} disabled={isSaving} className="px-6 py-2.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50">{t('common.cancel')}</button>
                <button onClick={handleManualSave} disabled={isSaving} className="bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-8 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
                    {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>} 
-                   {isSaving ? 'Salvando...' : 'Salvar Questão'}
+                   {isSaving ? t('question.saving') : t('question.saveQuestion')}
                </button>
             </div>
           </div>
@@ -520,24 +523,24 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
            {/* ... Conteúdo do Modal IA ... */}
            <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg p-0 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
-                  <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2"><Sparkles className="text-indigo-600 dark:text-indigo-400"/> Gerar Questões</h3>
+                  <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2"><Sparkles className="text-indigo-600 dark:text-indigo-400"/> {t('question.generateTitle')}</h3>
               </div>
               
               <div className="p-6">
                 <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg mb-6 overflow-hidden bg-white dark:bg-slate-800">
-                    <button onClick={() => setAiMode('topic')} className={`flex-1 py-3 font-medium transition-colors ${aiMode === 'topic' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>Por Tópico</button>
+                    <button type="button" onClick={() => setAiMode('topic')} className={`flex-1 py-3 font-medium transition-colors ${aiMode === 'topic' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{t('question.aiModeTopic')}</button>
                     <div className="w-px bg-slate-200 dark:bg-slate-700"></div>
-                    <button onClick={() => setAiMode('document')} className={`flex-1 py-3 font-medium transition-colors ${aiMode === 'document' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>De Documento</button>
+                    <button type="button" onClick={() => setAiMode('document')} className={`flex-1 py-3 font-medium transition-colors ${aiMode === 'document' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{t('question.aiModeDocument')}</button>
                 </div>
 
                 {aiMode === 'topic' ? (
                     <div className="space-y-4">
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">Tópico ou Conceito</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">{t('question.topicConcept')}</label>
                         <input 
                             value={aiParams.topic} 
                             onChange={e => setAiParams({...aiParams, topic: e.target.value})} 
                             className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm" 
-                            placeholder="Ex: Processo de fotossíntese..." 
+                            placeholder={t('question.topicPlaceholder')} 
                             autoFocus
                         />
                     </div>
@@ -553,19 +556,19 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                         {isParsing ? (
                             <div className="flex flex-col items-center text-indigo-600 dark:text-indigo-400">
                                 <Loader2 className="animate-spin mb-2" size={32}/>
-                                <p className="font-medium">Lendo documento...</p>
+                                <p className="font-medium">{t('question.readingDocument')}</p>
                             </div>
                         ) : uploadedFileName ? (
                             <div className="flex flex-col items-center text-emerald-600 dark:text-emerald-400">
                                 <FileText size={32} className="mb-2"/>
                                 <p className="font-bold">{uploadedFileName}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Clique para alterar</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('question.clickToChangeFile')}</p>
                             </div>
                         ) : (
                             <div className="flex flex-col items-center text-slate-500 dark:text-slate-400">
                                 <Upload size={32} className="mb-2"/>
-                                <p className="font-medium text-slate-700 dark:text-slate-300">Clique para enviar ou arraste o arquivo</p>
-                                <p className="text-xs mt-1">PDF, DOCX, XLSX (Máx 5MB)</p>
+                                <p className="font-medium text-slate-700 dark:text-slate-300">{t('question.dragDropFile')}</p>
+                                <p className="text-xs mt-1">{t('question.fileTypesHint')}</p>
                             </div>
                         )}
                     </div>
@@ -573,19 +576,19 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                 
                 {aiMode === 'document' && (
                     <div className="mt-4">
-                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Instruções (Opcional)</label>
+                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">{t('question.instructionsOptional')}</label>
                          <input 
                              value={aiParams.topic} 
                              onChange={e => setAiParams({...aiParams, topic: e.target.value})} 
                              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-3 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none text-sm shadow-sm" 
-                             placeholder="Focar em capítulo específico..." 
+                             placeholder={t('question.instructionsFocusPlaceholder')} 
                          />
                     </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-4 mt-4">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Quantidade</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{t('question.quantity')}</label>
                         <select 
                             value={aiParams.count} 
                             onChange={e => setAiParams({...aiParams, count: parseInt(e.target.value)})} 
@@ -595,7 +598,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Série</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{t('question.gradeShort')}</label>
                         <select 
                             value={aiParams.gradeId} 
                             onChange={e => setAiParams({...aiParams, gradeId: e.target.value})} 
@@ -605,22 +608,22 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Dificuldade</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">{t('question.difficulty')}</label>
                         <select 
                             value={aiParams.difficulty} 
                             onChange={e => setAiParams({...aiParams, difficulty: e.target.value as any})} 
                             className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-700 shadow-sm cursor-pointer"
                         >
-                            {['Easy','Medium','Hard'].map(d => <option key={d} value={d}>{d === 'Easy' ? 'Fácil' : d === 'Medium' ? 'Médio' : 'Difícil'}</option>)}
+                            {(['Easy','Medium','Hard'] as Difficulty[]).map(d => <option key={d} value={d}>{difficultyLabel(d)}</option>)}
                         </select>
                     </div>
                 </div>
               </div>
 
               <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-end gap-3">
-                 <button onClick={() => setShowAiModal(false)} className="px-5 py-2.5 font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
-                 <button onClick={handleGenerateAI} disabled={isGenerating} className="bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 transition-all disabled:opacity-70 disabled:cursor-wait">
-                    {isGenerating ? <Loader2 className="animate-spin" size={18}/> : <Sparkles size={18}/>} Gerar
+                 <button type="button" onClick={() => setShowAiModal(false)} className="px-5 py-2.5 font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">{t('common.cancel')}</button>
+                 <button type="button" onClick={handleGenerateAI} disabled={isGenerating} className="bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 transition-all disabled:opacity-70 disabled:cursor-wait">
+                    {isGenerating ? <Loader2 className="animate-spin" size={18}/> : <Sparkles size={18}/>} {t('question.generate')}
                  </button>
               </div>
            </div>
@@ -630,48 +633,49 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
       {error ? (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
             <AlertTriangle className="mx-auto text-red-500 dark:text-red-400 mb-4" size={48} />
-            <h3 className="text-lg font-bold text-red-700 dark:text-red-300 mb-2">Falha ao carregar Questões</h3>
+            <h3 className="text-lg font-bold text-red-700 dark:text-red-300 mb-2">{t('question.loadErrorTitle')}</h3>
             <p className="text-red-600 dark:text-red-400 mb-6">{error}</p>
-            <button onClick={refresh} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors font-medium"><RotateCcw size={16}/> Tentar Novamente</button>
+            <button onClick={refresh} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors font-medium"><RotateCcw size={16}/> {t('question.tryAgain')}</button>
         </div>
       ) : (
         <div className="grid gap-4">
             {loading ? (
                 <div className="py-20 flex flex-col items-center justify-center text-slate-400">
                     <Loader2 className="animate-spin mb-4 text-indigo-500" size={40} />
-                    <p className="font-medium">Carregando banco de questões...</p>
+                    <p className="font-medium">{t('question.loadingBank')}</p>
                 </div>
             ) : filteredQuestions.length === 0 ? (
                 <div className="py-20 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                     <FileQuestion size={48} className="mb-4 opacity-50"/>
-                    <p className="text-lg font-bold">Nenhuma questão encontrada</p>
-                    <p>Tente alterar os filtros ou adicione novo conteúdo.</p>
+                    <p className="text-lg font-bold">{t('question.noneFoundTitle')}</p>
+                    <p>{t('question.noneFoundHint')}</p>
                 </div>
             ) : paginatedQuestions.map(q => (
                 <div key={q.id} className={`bg-white dark:bg-slate-800 p-6 rounded-xl border shadow-sm hover:shadow-md transition-all group ${q.deleted ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-600'}`}>
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex flex-wrap gap-2">
-                        <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${q.difficulty === 'Hard' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : q.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}>{q.difficulty === 'Easy' ? 'Fácil' : q.difficulty === 'Medium' ? 'Médio' : 'Difícil'}</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${q.difficulty === 'Hard' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : q.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}>{difficultyLabel(q.difficulty)}</span>
                         <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">{q.subject}</span>
                         <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">{q.school_grades?.name || '—'}</span>
                         {(q.bncc || q.bncc_id) && (
                             <button
                               type="button"
-                              onClick={() => showBnccDetails(q)}
-                              className="inline-flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold px-2 py-1 rounded tracking-wider hover:bg-purple-200 dark:hover:bg-purple-800/50 cursor-pointer transition-colors text-left"
-                              title="Clique para ver detalhes da BNCC"
+                              onClick={() => openBnccDetails(q)}
+                              className="inline-flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold px-2 py-1 rounded tracking-wider hover:bg-purple-200 dark:hover:bg-purple-800/50 active:bg-purple-300 dark:active:bg-purple-800 cursor-pointer transition-colors text-left min-h-[44px] sm:min-h-0 touch-manipulation"
+                              title={t('question.bncc.tapForDetails')}
+                              aria-label={t('question.bncc.tapForDetails')}
                             >
-                                <ScrollText size={12} /> {getBnccForQuestion(q)?.codigo_alfanumerico || 'BNCC vinculada'}
+                                <ScrollText size={12} /> {getBnccForQuestion(q)?.codigo_alfanumerico || t('question.bncc.linkedShort')}
                             </button>
                         )}
-                        {q.deleted && <span className="bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">Excluída</span>}
+                        {q.deleted && <span className="bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-300 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">{t('question.deletedBadge')}</span>}
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {!q.deleted && <button onClick={() => openEditModal(q)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors" title="Edit"><Pencil size={18}/></button>}
+                        {!q.deleted && <button onClick={() => openEditModal(q)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors" title={t('common.edit')} aria-label={t('common.edit')}><Pencil size={18}/></button>}
                         {isAdmin && q.deleted ? (
-                            <button onClick={() => openRestoreModal(q)} className="p-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition-colors" title="Restore"><RotateCcw size={18}/></button>
+                            <button onClick={() => openRestoreModal(q)} className="p-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition-colors" title={t('common.restore')} aria-label={t('common.restore')}><RotateCcw size={18}/></button>
                         ) : !q.deleted && (
-                            <button onClick={() => openDeleteModal(q)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Delete"><Trash2 size={18}/></button>
+                            <button onClick={() => openDeleteModal(q)} className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title={t('common.delete')} aria-label={t('common.delete')}><Trash2 size={18}/></button>
                         )}
                     </div>
                 </div>
@@ -681,7 +685,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                     
                     {q.image_url && (
                         <div className="w-full flex justify-center mb-2">
-                            <img src={q.image_url} className="max-h-[400px] w-auto object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" alt="Question Resource" />
+                            <img src={q.image_url} className="max-h-[400px] w-auto object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" alt={t('question.imageResourceAlt')} />
                         </div>
                     )}
 
@@ -709,7 +713,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
             {/* Items per page selector and info */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600 font-medium">Itens por página:</span>
+                <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{t('common.pagination.itemsPerPage')}</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => {
@@ -724,8 +728,13 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                   <option value={200}>200</option>
                 </select>
               </div>
-              <span className="text-sm text-slate-500">
-                Mostrando {startIndex + 1} - {Math.min(endIndex, filteredQuestions.length)} de {filteredQuestions.length} {filteredQuestions.length !== 1 ? 'questões' : 'questão'}
+              <span className="text-sm text-slate-500 dark:text-slate-400">
+                {t('question.showingQuestions', {
+                  start: startIndex + 1,
+                  end: Math.min(endIndex, filteredQuestions.length),
+                  total: filteredQuestions.length,
+                  unit: filteredQuestions.length !== 1 ? t('question.questionUnitPlural') : t('question.questionUnit'),
+                })}
               </span>
             </div>
 
@@ -735,7 +744,8 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Página anterior"
+                title={t('common.pagination.prevPage')}
+                aria-label={t('common.pagination.prevPage')}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -774,14 +784,15 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
                 className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Próxima página"
+                title={t('common.pagination.nextPage')}
+                aria-label={t('common.pagination.nextPage')}
               >
                 <ChevronRight size={18} />
               </button>
 
               {/* Jump to page */}
               <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-300">
-                <span className="text-xs text-slate-500">Ir para:</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{t('common.pagination.goTo')}</span>
                 <input
                   type="number"
                   min={1}
@@ -799,6 +810,73 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ hasSupabase }) => {
           </div>
         </div>
       )}
+
+      {bnccModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bncc-detail-modal-title"
+            onClick={() => setBnccModal(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setBnccModal(null)}
+          >
+            <div
+              className="w-full sm:max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[88vh] flex flex-col border border-slate-200 dark:border-slate-700 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-700 shrink-0 gap-2">
+                <h3
+                  id="bncc-detail-modal-title"
+                  className="font-bold text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2 min-w-0"
+                >
+                  <ScrollText className="text-purple-600 dark:text-purple-400 shrink-0" size={20} />
+                  <span className="truncate">{t('question.bncc.modalTitle')}</span>
+                </h3>
+                <button
+                  type="button"
+                  className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 shrink-0 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  onClick={() => setBnccModal(null)}
+                  aria-label={t('common.close')}
+                >
+                  <X size={22} />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-4 space-y-4 flex-1 touch-pan-y overscroll-contain">
+                {'bncc' in bnccModal ? (
+                  bnccDetailRows(bnccModal.bncc).map((row) => (
+                    <div key={row.field}>
+                      <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        {t(`question.bncc.fields.${row.field}`)}
+                      </div>
+                      <div className="text-sm text-slate-800 dark:text-slate-200 mt-0.5 whitespace-pre-wrap break-words">
+                        {row.value}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{t('question.bncc.missingDetails')}</p>
+                    <p className="text-xs font-mono text-slate-500 dark:text-slate-400 break-all">
+                      {t('question.bncc.missingId', { id: bnccModal.missingId })}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-slate-100 dark:border-slate-700 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <button
+                  type="button"
+                  className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-bold text-sm touch-manipulation"
+                  onClick={() => setBnccModal(null)}
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

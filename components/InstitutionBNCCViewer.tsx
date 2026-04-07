@@ -2,6 +2,13 @@
 import React, { useState } from 'react';
 import { useBNCCManager } from '../presentation/hooks/useBNCCManager';
 import { ScrollText, Loader2, AlertTriangle, Search, Filter, Info, BookOpen } from 'lucide-react';
+import {
+    bnccCurriculumName,
+    bnccDisciplineRefName,
+    bnccSearchHaystack,
+    bnccSkillPrimaryText,
+    bnccTeachingStageName,
+} from '../utils/bnccDisplay';
 
 /**
  * InstitutionBNCCViewer - INSTITUTION ONLY
@@ -19,13 +26,17 @@ const InstitutionBNCCViewer: React.FC<InstitutionBNCCViewerProps> = ({ hasSupaba
   const [componentFilter, setComponentFilter] = useState('All');
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
-  const uniqueComponents = Array.from(new Set(items.map(i => i.componente_curricular).filter(Boolean))).sort();
+  const uniqueComponents = Array.from(
+      new Set(items.map(i => bnccCurriculumName(i)).filter(Boolean))
+  ).sort();
 
   const filteredItems = items.filter(i => {
-      if (i.deleted) return false; // Institution doesn't see deleted items
-      const matchSearch = (i.codigo_alfanumerico || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (i.descricao_habilidade || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchComp = componentFilter === 'All' || i.componente_curricular === componentFilter;
+      if (i.deleted) return false;
+      const term = searchTerm.toLowerCase().trim();
+      const matchSearch =
+          !term || bnccSearchHaystack(i).includes(term);
+      const comp = bnccCurriculumName(i);
+      const matchComp = componentFilter === 'All' || comp === componentFilter;
       return matchSearch && matchComp;
   });
 
@@ -69,7 +80,7 @@ const InstitutionBNCCViewer: React.FC<InstitutionBNCCViewerProps> = ({ hasSupaba
                   <input 
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
-                      placeholder="Buscar por código ou descrição..."
+                      placeholder="Buscar por código, componente, habilidade…"
                       className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                   />
               </div>
@@ -115,29 +126,29 @@ const InstitutionBNCCViewer: React.FC<InstitutionBNCCViewerProps> = ({ hasSupaba
                               : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600'
                       }`}
                   >
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-2 gap-2">
                           <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300 text-sm bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded">
                               {item.codigo_alfanumerico}
                           </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
-                              {item.componente_curricular}
+                          <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-right max-w-[55%] truncate" title={bnccCurriculumName(item)}>
+                              {bnccCurriculumName(item) || '—'}
                           </span>
                       </div>
-                      
-                      {item.ano_serie && (
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{item.ano_serie}</div>
-                      )}
-                      
+
+                      {bnccTeachingStageName(item) ? (
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{bnccTeachingStageName(item)}</div>
+                      ) : null}
+
                       <p className={`text-sm text-slate-700 dark:text-slate-200 ${selectedItem === item.id ? '' : 'line-clamp-3'}`}>
-                          {item.descricao_habilidade}
+                          {bnccSkillPrimaryText(item) || 'Sem descrição de habilidade.'}
                       </p>
-                      
-                      {item.unidade_tematica && (
+
+                      {bnccDisciplineRefName(item) ? (
                           <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-                              <span className="text-xs text-slate-400 dark:text-slate-500">Unidade: </span>
-                              <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">{item.unidade_tematica}</span>
+                              <span className="text-xs text-slate-400 dark:text-slate-500">Disciplina: </span>
+                              <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">{bnccDisciplineRefName(item)}</span>
                           </div>
-                      )}
+                      ) : null}
                       
                       {selectedItem === item.id && (
                           <div className="mt-3 pt-3 border-t border-indigo-100 dark:border-indigo-900/50">

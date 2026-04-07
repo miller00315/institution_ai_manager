@@ -290,15 +290,57 @@ export interface LibraryItem {
     deleted?: boolean;
 }
 
+/** Componente curricular (tabela `curriculum_component`). */
+export interface BNCCCurriculumComponent {
+    id: string;
+    name: string;
+    description?: string | null;
+}
+
+/** Disciplina BNCC (tabela `discipline_reference`). */
+export interface BNCCDisciplineReferenceRow {
+    id: string;
+    name: string;
+    description?: string | null;
+}
+
+/** Etapa de ensino (tabela `teaching_stage`). */
+export interface BNCCTeachingStageRow {
+    id: string;
+    name: string;
+    description?: string | null;
+}
+
+/** Competência específica / eixo BNCC (tabela `habilities`). */
+export interface BNCCHabilityRow {
+    id: string;
+    name: string;
+    description?: string | null;
+}
+
+/** Habilidade BNCC (tabela `specific_skills`). */
+export interface BNCCSpecificSkillRow {
+    id: string;
+    name: string;
+    description?: string | null;
+    hability_id?: string | null;
+    habilities?: BNCCHabilityRow | null;
+}
+
+/** Linha em `bncc` com joins usados para exibição e vínculos. */
 export interface BNCCItem {
     id: string;
     codigo_alfanumerico: string;
-    descricao_habilidade?: string;
-    ano_serie?: string;
-    componente_curricular?: string;
-    unidade_tematica?: string;
-    deleted?: boolean;
     created_at?: string;
+    deleted?: boolean;
+    curriculum_component_id?: string | null;
+    discipline_reference_id?: string | null;
+    teaching_stage_id?: string | null;
+    specific_skills_id?: string | null;
+    curriculum_component?: BNCCCurriculumComponent | null;
+    discipline_reference?: BNCCDisciplineReferenceRow | null;
+    teaching_stage?: BNCCTeachingStageRow | null;
+    specific_skills?: BNCCSpecificSkillRow | null;
 }
 
 export interface ClassroomRoom {

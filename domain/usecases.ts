@@ -9,7 +9,7 @@ import {
   Question, Test, Professor, Institution, SchoolClass, Student, TestResult, 
   AIAgent, TestRelease, UserRule, UserRegistrationDTO, InstitutionType, 
   SchoolGrade, Department, Discipline, AIQuestionParams, AnalyzedSheet, Address, TestReleaseSite, Library, LibraryItem,
-  BNCCItem, ClassroomRoom, ClassroomMessage, MessageReactionType, StudentDisability,
+  ClassroomRoom, ClassroomMessage, MessageReactionType, StudentDisability,
   ClassPerformanceReport, StudentPerformanceReport, TestPerformanceReport, ReportDateFilter,
   InstitutionPerformanceReport, ProfessorPerformanceReport
 } from '../../types';
@@ -166,10 +166,6 @@ export class LibraryUseCases {
 export class BNCCUseCases {
     constructor(private repo: IBNCCRepository) {}
     async getItems(includeDeleted?: boolean) { return this.repo.getAll(includeDeleted); }
-    async createItem(item: Partial<BNCCItem>) { await this.repo.create(item); }
-    async updateItem(id: string, item: Partial<BNCCItem>) { await this.repo.update(id, item); }
-    async deleteItem(id: string) { await this.repo.delete(id); }
-    async restoreItem(id: string) { await this.repo.restore(id); }
 }
 
 export class ResultsUseCases {
